@@ -16,38 +16,38 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       
       // Text Theme
-      textTheme: GoogleFonts.outfitTextTheme().copyWith(
-        displayLarge: GoogleFonts.outfit(
+      textTheme: GoogleFonts.urbanistTextTheme().copyWith(
+        displayLarge: GoogleFonts.urbanist(
           color: AppColors.textPrimary,
           fontSize: 32,
           fontWeight: FontWeight.bold,
         ),
-        displayMedium: GoogleFonts.outfit(
+        displayMedium: GoogleFonts.urbanist(
           color: AppColors.textPrimary,
           fontSize: 28,
           fontWeight: FontWeight.bold,
         ),
-        titleLarge: GoogleFonts.outfit(
+        titleLarge: GoogleFonts.urbanist(
           color: AppColors.textPrimary,
           fontSize: 24,
           fontWeight: FontWeight.w600,
         ),
-        titleMedium: GoogleFonts.outfit(
+        titleMedium: GoogleFonts.urbanist(
           color: AppColors.textPrimary,
           fontSize: 18,
           fontWeight: FontWeight.w600,
         ),
-        bodyLarge: GoogleFonts.outfit(
+        bodyLarge: GoogleFonts.urbanist(
           color: AppColors.textPrimary,
           fontSize: 16,
           fontWeight: FontWeight.normal,
         ),
-        bodyMedium: GoogleFonts.outfit(
+        bodyMedium: GoogleFonts.urbanist(
           color: AppColors.textSecondary,
           fontSize: 14,
           fontWeight: FontWeight.normal,
         ),
-        bodySmall: GoogleFonts.outfit(
+        bodySmall: GoogleFonts.urbanist(
           color: AppColors.textLight,
           fontSize: 12,
           fontWeight: FontWeight.normal,
@@ -64,7 +64,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(16),
           ),
           elevation: 0,
-          textStyle: GoogleFonts.outfit(
+          textStyle: GoogleFonts.urbanist(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -75,7 +75,7 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface,
-        hintStyle: GoogleFonts.outfit(color: AppColors.textLight),
+        hintStyle: GoogleFonts.urbanist(color: AppColors.textLight),
         contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),

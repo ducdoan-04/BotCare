@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
-import 'login_screen.dart';
 import 'main_navigation.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -12,22 +11,16 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _termsAccepted = false;
   bool _isLoading = false;
 
   void _handleSignup() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
+    setState(() => _isLoading = true);
+
     // Simulate API call
     await Future.delayed(const Duration(seconds: 2));
-    
+
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
       // Skip straight to main navigation acting as a successful register
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainNavigation()),
@@ -38,238 +31,168 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Container(
-          height: screenHeight,
-          color: AppColors.primary, 
-          child: Stack(
-            children: [
-              // Header Image / Gradient
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: screenHeight * 0.35, // Slightly smaller header for signup
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFF00B4D8),
-                        Color(0xFF0077B6),
-                      ],
-                    ),
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Join CareBot',
-                            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                              color: Colors.white,
-                              fontSize: 42,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'The absolute best ecosystem\nfor medical professionals!',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Background Hero Image
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: screenHeight * 0.55,
+              width: double.infinity,
+              child: Image.asset(
+                'images/screens/sign-up.jpg',
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
               ),
+            ),
+          ),
 
-              // Bottom Sheet Form
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  height: screenHeight * 0.70, // Needs more space for more fields
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(32),
-                      topRight: Radius.circular(32),
+          // Scrollable Foreground Content
+          Positioned.fill(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                children: [
+                  // Transparent spacer to push the white card down
+                  // We want the white card to start around 35-40% down the screen
+                  SizedBox(height: screenHeight * 0.35),
+
+                  // The white bottom card
+                  Container(
+                    constraints: BoxConstraints(
+                      minHeight: screenHeight *
+                          0.65, // Ensure it covers the rest of the screen
                     ),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Back Button Icon
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.background,
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back),
-                          color: AppColors.textPrimary,
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(32),
+                        topRight: Radius.circular(32),
                       ),
-                      const SizedBox(height: 24),
-
-                      // Title
-                      Text(
-                        'Create an account',
-                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          fontSize: 24,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Subtitle
-                      Text(
-                        'Enter your details to get started with CareBot',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 24),
-
-                      Expanded(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Full Name Field
-                              TextFormField(
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter full name',
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              
-                              // Email Field
-                              TextFormField(
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter email address',
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Password Field
-                              TextFormField(
-                                obscureText: _obscurePassword,
-                                decoration: InputDecoration(
-                                  hintText: 'Enter password',
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              
-                              // Confirm Password Field
-                              TextFormField(
-                                obscureText: _obscureConfirmPassword,
-                                decoration: InputDecoration(
-                                  hintText: 'Confirm password',
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscureConfirmPassword = !_obscureConfirmPassword;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-
-                              // Terms and Conditions
-                              Row(
-                                children: [
-                                  SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: Checkbox(
-                                      value: _termsAccepted,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _termsAccepted = value ?? false;
-                                        });
-                                      },
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'I agree to the Terms of Service & Privacy Policy',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                            ],
+                    ),
+                    padding:
+                        const EdgeInsets.only(left: 24, right: 24, top: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Back Button
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFF3F6F7),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.arrow_back,
+                              color: Color(0xFF10141A),
+                              size: 22,
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 10),
 
-                      // Sign Up Button
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _handleSignup,
-                        child: _isLoading 
-                          ? const SizedBox(
-                              height: 24, 
-                              width: 24, 
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                            )
-                          : const Text('Create Account'),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      // Footer Navigation back to login
-                      Center(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                            );
-                          },
-                          child: RichText(
-                            text: TextSpan(
-                              text: 'Already have an account? ',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
+                        // Title
+                        Text(
+                          'Create an account',
+                          style: Theme.of(context)
+                              .textTheme
+                              .displayMedium
+                              ?.copyWith(
+                                color: const Color(0xFF10141A),
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
                               ),
-                              children: [
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Subtitle
+                        Text(
+                          'Set up your access to manage users, data, and\nhealthcare operations.',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: const Color(0xFF808081),
+                                    height: 1.5,
+                                    fontSize: 14,
+                                  ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Form Fields
+                        _buildTextField(hintText: 'Enter full name'),
+                        const SizedBox(height: 16),
+
+                        _buildTextField(hintText: 'Enter email address'),
+                        const SizedBox(height: 16),
+
+                        _buildPasswordField(hintText: 'Enter password'),
+                        const SizedBox(height: 32),
+
+                        // Sign Up Button
+                        ElevatedButton(
+                          onPressed: _isLoading ? null : _handleSignup,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            minimumSize: const Size(double.infinity, 56),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(60), // Pill shape
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2))
+                              : const Text(
+                                  'Sign Up',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(height: 15),
+
+                        // Terms and Conditions
+                        Center(
+                          child: RichText(
+                            textAlign: TextAlign.center,
+                            text: TextSpan(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: const Color(0xFF808081),
+                                    fontSize: 13,
+                                    height: 1.5,
+                                  ),
+                              children: const [
                                 TextSpan(
-                                  text: 'Login',
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.primary,
+                                    text:
+                                        'By creating an account, you agree to our '),
+                                TextSpan(
+                                  text: 'Terms of\nService',
+                                  style: TextStyle(
+                                    color: Color(0xFF10141A),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextSpan(text: ' and '),
+                                TextSpan(
+                                  text: 'Privacy Policy',
+                                  style: TextStyle(
+                                    color: Color(0xFF10141A),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -277,13 +200,89 @@ class _SignupScreenState extends State<SignupScreen> {
                             ),
                           ),
                         ),
-                      ),
-                    ],
+
+                        // Extra bottom padding for SafeArea and scroll breathing room
+                        SizedBox(
+                            height:
+                                bottomPadding > 0 ? bottomPadding + 24 : 48),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({required String hintText}) {
+    return TextFormField(
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(
+          color: Color(0xFFA0A5A9),
+          fontWeight: FontWeight.w500,
+          fontSize: 15,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF9F9F9),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField({required String hintText}) {
+    return TextFormField(
+      obscureText: _obscurePassword,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(
+          color: Color(0xFFA0A5A9),
+          fontWeight: FontWeight.w500,
+          fontSize: 15,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF9F9F9),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility : Icons.visibility_off,
+            color: const Color(0xFF10141A),
+            size: 20,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
         ),
       ),
     );
