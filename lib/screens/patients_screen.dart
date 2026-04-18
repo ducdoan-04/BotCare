@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'notification_screen.dart';
 
 class PatientsScreen extends StatelessWidget {
   const PatientsScreen({super.key});
@@ -28,7 +29,8 @@ class PatientsScreen extends StatelessWidget {
                       const SizedBox(width: 12),
                       _buildHeaderIcon(Icons.notifications_none),
                       const SizedBox(width: 12),
-                      _buildHeaderIcon(Icons.add, color: AppColors.primary, iconColor: Colors.white),
+                      _buildHeaderIcon(Icons.add,
+                          color: AppColors.primary, iconColor: Colors.white),
                     ],
                   ),
                 ],
@@ -87,13 +89,28 @@ class PatientsScreen extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: 4,
                 itemBuilder: (context, index) {
-                  final names = ['James Morrison', 'Clara Evans', 'Anthony Ramirez', 'Lillian Hart'];
-                  final doctors = ['Dr. Dianne Russell', 'Dr. Mona Flores', 'Dr. Alicia Wexer', 'Dr. Leslie Alexander'];
-                  final dates = ['June 12, 2026', 'June 14, 2026', 'June 16, 2026', 'June 13, 2026'];
+                  final names = [
+                    'James Morrison',
+                    'Clara Evans',
+                    'Anthony Ramirez',
+                    'Lillian Hart'
+                  ];
+                  final doctors = [
+                    'Dr. Dianne Russell',
+                    'Dr. Mona Flores',
+                    'Dr. Alicia Wexer',
+                    'Dr. Leslie Alexander'
+                  ];
+                  final dates = [
+                    'June 12, 2026',
+                    'June 14, 2026',
+                    'June 16, 2026',
+                    'June 13, 2026'
+                  ];
                   return _buildPatientCard(
-                    context, 
-                    names[index], 
-                    doctors[index], 
+                    context,
+                    names[index],
+                    doctors[index],
                     dates[index],
                     index + 20, // Different avatar ids
                   );
@@ -115,11 +132,13 @@ class PatientsScreen extends StatelessWidget {
         color: color ?? Colors.white,
         border: color == null ? Border.all(color: AppColors.border) : null,
       ),
-      child: Icon(iconData, color: iconColor ?? AppColors.textPrimary, size: 24),
+      child:
+          Icon(iconData, color: iconColor ?? AppColors.textPrimary, size: 24),
     );
   }
 
-  Widget _buildStatsCard(BuildContext context, {
+  Widget _buildStatsCard(
+    BuildContext context, {
     required String title,
     required String value,
     required String statsPercent,
@@ -160,8 +179,8 @@ class PatientsScreen extends StatelessWidget {
               Text(
                 value,
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  fontSize: 48,
-                ),
+                      fontSize: 48,
+                    ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -170,9 +189,11 @@ class PatientsScreen extends StatelessWidget {
                     Text(
                       statsPercent,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isIncrease ? AppColors.success : AppColors.error,
-                        fontWeight: FontWeight.bold,
-                      ),
+                            color: isIncrease
+                                ? AppColors.success
+                                : AppColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(width: 4),
                     Expanded(
@@ -193,7 +214,8 @@ class PatientsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPatientCard(BuildContext context, String name, String doctor, String lastVisit, int imageId) {
+  Widget _buildPatientCard(BuildContext context, String name, String doctor,
+      String lastVisit, int imageId) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -216,7 +238,7 @@ class PatientsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 20),
-          
+
           // Details
           Expanded(
             child: Column(
@@ -230,9 +252,9 @@ class PatientsScreen extends StatelessWidget {
                 Text(
                   doctor,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
+                        color: AppColors.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -241,19 +263,22 @@ class PatientsScreen extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Last Visit', style: Theme.of(context).textTheme.bodySmall),
+                        Text('Last Visit',
+                            style: Theme.of(context).textTheme.bodySmall),
                         Text(
                           lastVisit,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
                         ),
                       ],
                     ),
                     Row(
                       children: [
-                        _buildActionIcon(Icons.edit_outlined, AppColors.textPrimary),
+                        _buildActionIcon(
+                            Icons.edit_outlined, AppColors.textPrimary),
                         const SizedBox(width: 8),
                         _buildActionIcon(Icons.delete_outline, AppColors.error),
                       ],
