@@ -5,6 +5,7 @@ import 'doctors_screen.dart';
 import 'patients_screen.dart';
 import 'appointments_screen.dart';
 import 'messages_screen.dart';
+import 'staff_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -18,8 +19,9 @@ class _MainNavigationState extends State<MainNavigation> {
 
   final List<Widget> _screens = [
     const DashboardScreen(),
-    const PatientsScreen(),
     const DoctorsScreen(),
+    const PatientsScreen(),
+    const StaffScreen(),
     const AppointmentsScreen(),
     const MessagesScreen(),
   ];
@@ -52,14 +54,16 @@ class _MainNavigationState extends State<MainNavigation> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildNavItem(0, Icons.home_rounded, 'Dashboard'),
-                    const SizedBox(width: 8),
-                    _buildNavItem(1, Icons.person_outline_rounded, 'Patients'),
-                    const SizedBox(width: 8),
-                    _buildNavItem(2, Icons.medical_services_outlined, 'Doctors'),
-                    const SizedBox(width: 8),
-                    _buildNavItem(3, Icons.calendar_today_outlined, 'Appointments'),
-                    const SizedBox(width: 8),
-                    _buildNavItem(4, Icons.chat_bubble_outline_rounded, 'Messages', hasNotification: true),
+                    const SizedBox(width: 6),
+                    _buildNavItem(1, Icons.medical_services_outlined, 'Doctors'),
+                    const SizedBox(width: 6),
+                    _buildNavItem(2, Icons.person_outline_rounded, 'Patients'),
+                    const SizedBox(width: 6),
+                    _buildNavItem(3, Icons.badge_outlined, 'Staff'),
+                    const SizedBox(width: 6),
+                    _buildNavItem(4, Icons.calendar_today_outlined, 'Appointment'),
+                    const SizedBox(width: 6),
+                    _buildNavItem(5, Icons.chat_bubble_outline_rounded, 'Message', hasNotification: true),
                   ],
                 ),
               ),
