@@ -2,9 +2,24 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'notification_screen.dart';
 import 'doctor_detail_screen.dart';
+import 'update_doctor_screen.dart';
 
-class DoctorsScreen extends StatelessWidget {
+class DoctorsScreen extends StatefulWidget {
   const DoctorsScreen({super.key});
+
+  @override
+  State<DoctorsScreen> createState() => _DoctorsScreenState();
+}
+
+class _DoctorsScreenState extends State<DoctorsScreen> {
+  final List<Map<String, dynamic>> _doctors = [
+    {'name': 'Dr. Dianne Russell', 'specialty': 'General Practitioner', 'time': '9AM - 2PM', 'avatar': 1, 'isAvailable': true},
+    {'name': 'Dr. Jacob Jones', 'specialty': 'Cardiology', 'time': '9AM - 2PM', 'avatar': 2, 'isAvailable': true},
+    {'name': 'Dr. Mona Flores', 'specialty': 'Dermatology', 'time': '9AM - 2PM', 'avatar': 3, 'isAvailable': true},
+    {'name': 'Dr. Alicia Wexer', 'specialty': 'Dermatology', 'time': '9AM - 2PM', 'avatar': 4, 'isAvailable': true},
+    {'name': 'Dr. Leslie Alexander', 'specialty': 'General Practitioner', 'time': '2PM - 7PM', 'avatar': 5, 'isAvailable': false},
+    {'name': 'Dr. Kathryn Murphy', 'specialty': 'Cardiology', 'time': '9AM - 2PM', 'avatar': 6, 'isAvailable': true},
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +84,7 @@ class DoctorsScreen extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                itemCount: 6,
+                itemCount: _doctors.length,
                 itemBuilder: (context, index) {
                   return _buildDoctorCard(context, index);
                 },
@@ -146,17 +161,11 @@ class DoctorsScreen extends StatelessWidget {
   }
 
   Widget _buildDoctorCard(BuildContext context, int index) {
-    final doctors = [
-      {'name': 'Dr. Dianne Russell', 'specialty': 'General Practitioner', 'time': '9AM - 2PM'},
-      {'name': 'Dr. Jacob Jones', 'specialty': 'Cardiology', 'time': '9AM - 2PM'},
-      {'name': 'Dr. Mona Flores', 'specialty': 'Dermatology', 'time': '9AM - 2PM'},
-      {'name': 'Dr. Alicia Wexer', 'specialty': 'Dermatology', 'time': '9AM - 2PM'},
-      {'name': 'Dr. Leslie Alexander', 'specialty': 'General Practitioner', 'time': '2PM - 7PM'},
-      {'name': 'Dr. Kathryn Murphy', 'specialty': 'Cardiology', 'time': '9AM - 2PM'},
-    ];
+    if (index >= _doctors.length) return const SizedBox.shrink();
 
-    final doctor = doctors[index % doctors.length];
-    final bool isAvailable = index != 4; // Dr Leslie is unavailable in figma
+    final doctor = _doctors[index];
+    final bool isAvailable = doctor['isAvailable'] as bool;
+    final int avatarIndex = doctor['avatar'] as int;
 
     return InkWell(
       onTap: () {
@@ -188,7 +197,7 @@ class DoctorsScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   image: DecorationImage(
-                    image: AssetImage('images/avatars-doctor/avatar-${index + 1}.jpg'),
+                    image: AssetImage('images/avatars-doctor/avatar-$avatarIndex.jpg'),
                     fit: BoxFit.cover,
                     colorFilter: isAvailable 
                         ? null 
@@ -270,9 +279,25 @@ class DoctorsScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    _buildActionIcon(Icons.edit_outlined),
+                    GestureDetector(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => UpdateDoctorScreen(
+                            doctor: doctor,
+                            index: index,
+                          ),
+                        );
+                      },
+                      child: _buildActionIcon(Icons.edit_outlined),
+                    ),
                     const SizedBox(width: 8),
-                    _buildActionIcon(Icons.delete_outline, isDelete: true),
+                    GestureDetector(
+                      onTap: () => _showDeleteDialog(context, doctor['name']!, index),
+                      child: _buildActionIcon(Icons.delete_outline, isDelete: true),
+                    ),
                   ],
                 ),
               ],
@@ -304,6 +329,103 @@ class DoctorsScreen extends StatelessWidget {
         color: isDelete ? const Color(0xFFF04438) : AppColors.textPrimary,
         size: 18,
       ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, String doctorName, int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFEF3F2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD92D20),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.delete_outline, color: Colors.white, size: 36),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Delete',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 16),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(fontSize: 15, color: AppColors.textSecondary, height: 1.5),
+                    children: [
+                      const TextSpan(text: 'Are you sure you want to delete\n'),
+                      TextSpan(text: doctorName, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                      const TextSpan(text: '?'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: const Color(0xFF008394)),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(color: Color(0xFF008394), fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _doctors.removeAt(index);
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF008394),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Yes, Delete',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
