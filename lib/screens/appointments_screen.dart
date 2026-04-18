@@ -18,9 +18,13 @@ class AppointmentsScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Appointments',
-                    style: Theme.of(context).textTheme.displayLarge,
+                  Flexible(
+                    child: Text(
+                      'Appointments',
+                      style: Theme.of(context).textTheme.displayLarge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   Row(
                     children: [

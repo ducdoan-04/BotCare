@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_colors.dart';
 import 'help_center_screen.dart';
 import 'account_screen.dart';
+import 'change_password_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -107,6 +108,8 @@ class DashboardScreen extends StatelessWidget {
                           onSelected: (value) {
                             if (value == 1) {
                               Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountScreen()));
+                            } else if (value == 2) {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
                             } else if (value == 4) {
                               Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpCenterScreen()));
                             }

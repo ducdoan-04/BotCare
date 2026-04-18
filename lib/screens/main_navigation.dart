@@ -46,15 +46,22 @@ class _MainNavigationState extends State<MainNavigation> {
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildNavItem(0, Icons.home_rounded, 'Dashboard'),
-                  _buildNavItem(1, Icons.person_outline_rounded, 'Patients'),
-                  _buildNavItem(2, Icons.medical_services_outlined, 'Doctors'),
-                  _buildNavItem(3, Icons.calendar_today_outlined, 'Appointments'),
-                  _buildNavItem(4, Icons.chat_bubble_outline_rounded, 'Messages', hasNotification: true),
-                ],
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildNavItem(0, Icons.home_rounded, 'Dashboard'),
+                    const SizedBox(width: 8),
+                    _buildNavItem(1, Icons.person_outline_rounded, 'Patients'),
+                    const SizedBox(width: 8),
+                    _buildNavItem(2, Icons.medical_services_outlined, 'Doctors'),
+                    const SizedBox(width: 8),
+                    _buildNavItem(3, Icons.calendar_today_outlined, 'Appointments'),
+                    const SizedBox(width: 8),
+                    _buildNavItem(4, Icons.chat_bubble_outline_rounded, 'Messages', hasNotification: true),
+                  ],
+                ),
               ),
             ),
           ),
