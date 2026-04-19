@@ -3,6 +3,7 @@ import '../theme/app_colors.dart';
 import 'notification_screen.dart';
 import 'doctor_detail_screen.dart';
 import 'update_doctor_screen.dart';
+import 'add_doctor_screen.dart';
 
 class DoctorsScreen extends StatefulWidget {
   const DoctorsScreen({super.key});
@@ -55,7 +56,17 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                         child: _buildHeaderIcon(Icons.notifications_none, hasNotification: true),
                       ),
                       const SizedBox(width: 12),
-                      _buildAddIcon(),
+                      GestureDetector(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => const AddDoctorScreen(),
+                          );
+                        },
+                        child: _buildAddIcon(),
+                      ),
                     ],
                   ),
                 ],

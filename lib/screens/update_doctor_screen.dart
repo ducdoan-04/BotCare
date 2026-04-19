@@ -1,14 +1,27 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'select_country_screen.dart';
+import 'select_state_screen.dart';
 
-class UpdateDoctorScreen extends StatelessWidget {
+class UpdateDoctorScreen extends StatefulWidget {
   final Map<String, dynamic>? doctor;
   final int? index;
 
   const UpdateDoctorScreen({super.key, this.doctor, this.index});
 
   @override
+  State<UpdateDoctorScreen> createState() => _UpdateDoctorScreenState();
+}
+
+class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
+  int _currentStep = 0; // 0: Basic Info, 1: Detail Info, 2: Security
+  String _selectedPhoneCountry = 'United States';
+  String _selectedGender = 'Female';
+  String? _selectedState = 'Alaska';
+
+  @override
   Widget build(BuildContext context) {
+    final doctor = widget.doctor;
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: const BoxDecoration(
@@ -43,7 +56,8 @@ class UpdateDoctorScreen extends StatelessWidget {
                       color: AppColors.background,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close, size: 20, color: AppColors.textSecondary),
+                    child: const Icon(Icons.close,
+                        size: 20, color: AppColors.textSecondary),
                   ),
                 ),
               ],
@@ -79,7 +93,8 @@ class UpdateDoctorScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
                           image: DecorationImage(
-                            image: AssetImage('images/avatars-doctor/avatar-${(index ?? 0) + 1}.jpg'),
+                            image: AssetImage(
+                                'images/avatars-doctor/avatar-${(widget.index ?? 0) + 1}.jpg'),
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -90,14 +105,17 @@ class UpdateDoctorScreen extends StatelessWidget {
                         children: [
                           const Text(
                             'JPG or PNG, < 5 MB.',
-                            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 13),
                           ),
                           const SizedBox(height: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: const Color(0xFF008394)),
+                              border:
+                                  Border.all(color: const Color(0xFF008394)),
                             ),
                             child: const Text(
                               'Upload New Picture',
@@ -115,20 +133,43 @@ class UpdateDoctorScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // --- FORM FIELDS ---
-                  _buildTextField('Dr. Dianne Russell'),
+                  _buildTextField(hintText: 'Dr. Dianne Russell'),
                   const SizedBox(height: 16),
-                  _buildTextField('6391 Elgin St. Celina, Delaware 10299'),
+                  _buildTextField(
+                      hintText: '6391 Elgin St. Celina, Delaware 10299'),
                   const SizedBox(height: 16),
-                  _buildPhoneField('(704) 555-0127'),
+                  _buildPhoneField(hintPhone: '(704) 555-0127'),
                   const SizedBox(height: 16),
-                  _buildTextField('6391 Elgin St. Celina, Delaware 10299'),
+                  _buildTextField(
+                      hintText: '6391 Elgin St. Celina, Delaware 10299'),
                   const SizedBox(height: 16),
-                  _buildDropdownField('United States', true), // Assuming flag is part of it or just text
+                  _buildDropdownField('United States',
+                      true), // Assuming flag is part of it or just text
                   const SizedBox(height: 16),
-                  _buildDropdownField('Alaska', false),
+                  GestureDetector(
+                    onTap: () async {
+                      final result = await showModalBottomSheet<String>(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => SelectStateScreen(
+                          initialSelection: _selectedState ?? 'Alaska',
+                        ),
+                      );
+                      if (result != null) {
+                        setState(() => _selectedState = result);
+                      }
+                    },
+                    child: _buildDropdownField(
+                        _selectedState ?? 'Alaska', false),
+                  ),
                   const SizedBox(height: 16),
-                  _buildTextField('Fairbanks'),
-                  
+                  _buildTextField(hintText: 'Fairbanks'),
+                  const SizedBox(height: 16),
+                  _buildTextField(hintText: '99703'),
+                  const SizedBox(height: 24),
+                  _buildGenderSelection(),
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -198,7 +239,8 @@ class UpdateDoctorScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: isSelected ? const Color(0xFFE6F2F3) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isSelected ? const Color(0xFF008394) : AppColors.border),
+        border: Border.all(
+            color: isSelected ? const Color(0xFF008394) : AppColors.border),
       ),
       child: Text(
         label,
@@ -211,80 +253,101 @@ class UpdateDoctorScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField(String hint) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        hint,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
+  Widget _buildTextField({required String hintText}) {
+    return TextFormField(
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(
+          color: Color(0xFFA0A5A9),
+          fontWeight: FontWeight.w500,
           fontSize: 15,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF9F9F9),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
     );
   }
 
-  Widget _buildPhoneField(String number) {
+  Widget _buildPhoneField({required String hintPhone}) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: Color(0xFFF9F9F9),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
           // Country code part
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Row(
-              children: [
-                // Minimalist simulated US flag
-                Container(
-                  width: 20,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: Colors.blue[900],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(flex: 1, child: Container()),
-                      Expanded(
-                        flex: 1,
-                        child: Column(
-                          children: [
-                            Expanded(child: Container(color: Colors.red)),
-                            Expanded(child: Container(color: Colors.white)),
-                            Expanded(child: Container(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+          GestureDetector(
+            onTap: () async {
+              final result = await showModalBottomSheet<String>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => SelectCountryScreen(
+                  initialSelection: _selectedPhoneCountry,
                 ),
-                const SizedBox(width: 8),
-                const Text('USD', style: TextStyle(fontWeight: FontWeight.w500)),
-                const SizedBox(width: 4),
-                const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.textSecondary),
-              ],
+              );
+              if (result != null) {
+                setState(() => _selectedPhoneCountry = result);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 20,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(2),
+                      image: DecorationImage(
+                        image: AssetImage(
+                            'images/flags/Nation=${_getFlagAssetName(_selectedPhoneCountry)}.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(_getPhoneCode(_selectedPhoneCountry),
+                      style: const TextStyle(fontWeight: FontWeight.w500)),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down,
+                      size: 18, color: AppColors.textSecondary),
+                ],
+              ),
             ),
           ),
           Container(width: 1, height: 24, color: AppColors.border),
           // Number part
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                number,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+            child: TextField(
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                hintText: hintPhone,
+                hintStyle: const TextStyle(
+                  color: AppColors.textSecondary,
                   fontSize: 15,
                 ),
+                border: InputBorder.none,
+                fillColor: const Color(0xFFF9F9F9),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
           ),
@@ -293,12 +356,76 @@ class UpdateDoctorScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildGenderSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Gender',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _buildGenderCard('Male')),
+            const SizedBox(width: 16),
+            Expanded(child: _buildGenderCard('Female')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenderCard(String value) {
+    bool isSelected = _selectedGender == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedGender = value;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE6F2F3) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              value == 'Male' ? Icons.face : Icons.face_3,
+              size: 40,
+              color: isSelected ? AppColors.primary : AppColors.textPrimary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: TextStyle(
+                color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDropdownField(String value, bool showFlag) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: const Color(0xFFF9F9F9),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -306,42 +433,33 @@ class UpdateDoctorScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              if (showFlag) ...[
+              if (showFlag && value != 'Choose country') ...[
                 Container(
                   width: 20,
                   height: 14,
                   decoration: BoxDecoration(
-                    color: Colors.blue[900],
                     borderRadius: BorderRadius.circular(2),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(flex: 1, child: Container()),
-                      Expanded(
-                        flex: 1,
-                        child: Column(
-                          children: [
-                            Expanded(child: Container(color: Colors.red)),
-                            Expanded(child: Container(color: Colors.white)),
-                            Expanded(child: Container(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
+                    image: DecorationImage(
+                      image: AssetImage(
+                          'images/flags/Nation=${_getFlagAssetName(value)}.png'),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
               ],
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-          const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.textPrimary),
+          const Icon(Icons.keyboard_arrow_down,
+              size: 20, color: AppColors.textPrimary),
         ],
       ),
     );
@@ -352,7 +470,8 @@ class UpdateDoctorScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
@@ -371,19 +490,24 @@ class UpdateDoctorScreen extends StatelessWidget {
                       color: Color(0xFF05B93E),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.delete, color: Colors.white, size: 36),
+                    child:
+                        const Icon(Icons.delete, color: Colors.white, size: 36),
                   ),
                 ),
                 const SizedBox(height: 24),
                 const Text(
                   'Successfully',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   'Info doctor was changed successfully.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  style:
+                      TextStyle(fontSize: 14, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 32),
                 GestureDetector(
@@ -401,7 +525,10 @@ class UpdateDoctorScreen extends StatelessWidget {
                     alignment: Alignment.center,
                     child: const Text(
                       'Ok',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16),
                     ),
                   ),
                 ),
@@ -411,5 +538,55 @@ class UpdateDoctorScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _getFlagAssetName(String country) {
+    if (country == 'Uzbekistan') return 'uzbekistan';
+    return country.toLowerCase().replaceAll(' ', '_');
+  }
+
+  String _getPhoneCode(String country) {
+    switch (country) {
+      case 'Vietnam':
+        return '+84';
+      case 'China':
+        return '+86';
+      case 'Japan':
+        return '+81';
+      case 'South Korea':
+        return '+82';
+      case 'Thailand':
+        return '+66';
+      case 'Singapore':
+        return '+65';
+      case 'Malaysia':
+        return '+60';
+      case 'Indonesia':
+        return '+62';
+      case 'Philippines':
+        return '+63';
+      case 'India':
+        return '+91';
+      case 'United States':
+        return '+1';
+      case 'United Kingdom':
+        return '+44';
+      case 'Uruguay':
+        return '+598';
+      case 'Uzbekistan':
+        return '+998';
+      case 'Vanuatu':
+        return '+678';
+      case 'Venezuela':
+        return '+58';
+      case 'Wales':
+        return '+44';
+      case 'Yemen':
+        return '+967';
+      case 'Zambia':
+        return '+260';
+      default:
+        return '+1';
+    }
   }
 }
