@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'add_patient_screen.dart';
 import 'notification_screen.dart';
+import 'patient_info_screen.dart';
 import 'update_patient_screen.dart';
 
 class PatientsScreen extends StatefulWidget {
@@ -377,85 +378,95 @@ class _PatientsScreenState extends State<PatientsScreen> {
 
   Widget _buildPatientCard(
       BuildContext context, Map<String, dynamic> patient, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 80,
-            height: 100,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              image: DecorationImage(
-                image: AssetImage(
-                    'images/avatars-patient/avatar-${patient['avatarId']}.jpg'),
-                fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PatientInfoScreen(patient: patient, index: index),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 80,
+              height: 100,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                image: DecorationImage(
+                  image: AssetImage(
+                      'images/avatars-patient/avatar-${patient['avatarId']}.jpg'),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  patient['name'] as String,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  patient['doctor'] as String,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                        fontStyle: FontStyle.italic,
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    patient['name'] as String,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    patient['doctor'] as String,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Last Visit',
+                              style: Theme.of(context).textTheme.bodySmall),
+                          Text(
+                            patient['lastVisit'] as String,
+                            style:
+                                Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textPrimary,
+                                    ),
+                          ),
+                        ],
                       ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Last Visit',
-                            style: Theme.of(context).textTheme.bodySmall),
-                        Text(
-                          patient['lastVisit'] as String,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.textPrimary,
-                                  ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => _showUpdatePatientSheet(patient, index),
-                          child: _buildActionIcon(
-                              Icons.edit_outlined, AppColors.textPrimary),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => _showDeleteDialog(
-                              patient['name'] as String, index),
-                          child: _buildActionIcon(
-                              Icons.delete_outline, AppColors.error),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => _showUpdatePatientSheet(patient, index),
+                            child: _buildActionIcon(
+                                Icons.edit_outlined, AppColors.textPrimary),
+                          ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => _showDeleteDialog(
+                                patient['name'] as String, index),
+                            child: _buildActionIcon(
+                                Icons.delete_outline, AppColors.error),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'notification_screen.dart';
+import 'staff_detail_screen.dart';
+import 'update_staff_screen.dart';
 
 class StaffScreen extends StatefulWidget {
   const StaffScreen({super.key});
@@ -237,7 +239,18 @@ class _StaffScreenState extends State<StaffScreen> {
                 const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
             itemCount: filteredStaff.length,
             itemBuilder: (context, index) {
-              return _buildStaffCard(filteredStaff[index]);
+              final originalIndex = _staff.indexOf(filteredStaff[index]);
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => StaffDetailScreen(staff: filteredStaff[index], index: originalIndex),
+                    ),
+                  );
+                },
+                child: _buildStaffCard(filteredStaff[index], originalIndex),
+              );
             },
           ),
         ),
@@ -288,7 +301,7 @@ class _StaffScreenState extends State<StaffScreen> {
     );
   }
 
-  Widget _buildStaffCard(Map<String, dynamic> staff) {
+  Widget _buildStaffCard(Map<String, dynamic> staff, int originalIndex) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -407,10 +420,18 @@ class _StaffScreenState extends State<StaffScreen> {
                     ),
                     Row(
                       children: [
-                        _buildActionIcon(
-                            Icons.edit_outlined, AppColors.textPrimary),
+                        GestureDetector(
+                          onTap: () => _showUpdateStaffSheet(staff, originalIndex),
+                          child: _buildActionIcon(
+                              Icons.edit_outlined, AppColors.textPrimary),
+                        ),
                         const SizedBox(width: 8),
-                        _buildActionIcon(Icons.delete_outline, AppColors.error),
+                        GestureDetector(
+                          onTap: () => _showDeleteDialog(
+                              staff['name'] as String, originalIndex),
+                          child: _buildActionIcon(
+                              Icons.delete_outline, AppColors.error),
+                        ),
                       ],
                     ),
                   ],
@@ -452,6 +473,146 @@ class _StaffScreenState extends State<StaffScreen> {
         ],
       ),
       child: Icon(icon, color: color, size: 18),
+    );
+  }
+
+  void _showUpdateStaffSheet(Map<String, dynamic> staff, int index) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => UpdateStaffSheet(
+        staff: staff,
+        onSave: (updatedStaff) {
+          setState(() {
+            _staff[index] = updatedStaff;
+          });
+        },
+      ),
+    );
+  }
+
+  void _showDeleteDialog(String staffName, int index) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: const Color(0xFFE6F0F2), // Adjust if needed, looks slightly tinted
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFEF3F2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFD92D20),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.delete_outline,
+                          color: Colors.white, size: 28),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Delete staff',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(
+                        fontSize: 16, color: AppColors.textSecondary, height: 1.5),
+                    children: [
+                      const TextSpan(text: 'Are you sure you want to delete\n'),
+                      TextSpan(
+                        text: staffName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const TextSpan(text: '?'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(dialogContext),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(
+                                color: const Color(0xFF008394), width: 1.5),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Color(0xFF008394),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pop(dialogContext); // close dialog
+                          setState(() {
+                            _staff.removeAt(index);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF008394),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Yes, Delete',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
