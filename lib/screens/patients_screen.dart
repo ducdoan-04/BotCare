@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
+import 'add_patient_screen.dart';
 import 'notification_screen.dart';
+import 'update_patient_screen.dart';
 
 class PatientsScreen extends StatefulWidget {
   const PatientsScreen({super.key});
@@ -78,10 +81,30 @@ class _PatientsScreenState extends State<PatientsScreen> {
                 children: [
                   _buildHeaderIcon(Icons.search),
                   const SizedBox(width: 12),
-                  _buildHeaderIcon(Icons.notifications_none),
+                  GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationScreen(),
+                      ),
+                    );
+                  },
+                  child: _buildHeaderIcon(Icons.notifications_none),
+                ),
                   const SizedBox(width: 12),
-                  _buildHeaderIcon(Icons.add,
-                      color: AppColors.primary, iconColor: Colors.white),
+                  GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const AddPatientScreen(),
+                      );
+                    },
+                    child: _buildHeaderIcon(Icons.add,
+                        color: AppColors.primary, iconColor: Colors.white),
+                  ),
                 ],
               ),
             ],
@@ -143,10 +166,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
               final patient = _patients[index];
               return _buildPatientCard(
                 context,
-                patient['name'],
-                patient['doctor'],
-                patient['lastVisit'],
-                patient['avatarId'],
+                patient,
+                index,
               );
             },
           ),
@@ -170,7 +191,17 @@ class _PatientsScreenState extends State<PatientsScreen> {
                 'Patient',
                 style: Theme.of(context).textTheme.displayLarge,
               ),
-              _buildHeaderIcon(Icons.notifications_none),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationScreen(),
+                    ),
+                  );
+                },
+                child: _buildHeaderIcon(Icons.notifications_none),
+              ),
             ],
           ),
           Expanded(
@@ -181,8 +212,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
                   Container(
                     width: 120,
                     height: 120,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE6F2F3),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE6F2F3),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -212,7 +243,12 @@ class _PatientsScreenState extends State<PatientsScreen> {
                   const SizedBox(height: 32),
                   GestureDetector(
                     onTap: () {
-                      // Navigate to add patient (placeholder)
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const AddPatientScreen(),
+                      );
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -289,7 +325,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
               ),
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.background,
                 ),
@@ -339,8 +375,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
     );
   }
 
-  Widget _buildPatientCard(BuildContext context, String name, String doctor,
-      String lastVisit, int imageId) {
+  Widget _buildPatientCard(
+      BuildContext context, Map<String, dynamic> patient, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -350,32 +386,30 @@ class _PatientsScreenState extends State<PatientsScreen> {
       ),
       child: Row(
         children: [
-          // Avatar
           Container(
             width: 80,
             height: 100,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               image: DecorationImage(
-                image: AssetImage('images/avatars-patient/avatar-$imageId.jpg'),
+                image: AssetImage(
+                    'images/avatars-patient/avatar-${patient['avatarId']}.jpg'),
                 fit: BoxFit.cover,
               ),
             ),
           ),
           const SizedBox(width: 20),
-
-          // Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  patient['name'] as String,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  doctor,
+                  patient['doctor'] as String,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.textSecondary,
                         fontStyle: FontStyle.italic,
@@ -391,7 +425,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
                         Text('Last Visit',
                             style: Theme.of(context).textTheme.bodySmall),
                         Text(
-                          lastVisit,
+                          patient['lastVisit'] as String,
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.w600,
@@ -402,10 +436,18 @@ class _PatientsScreenState extends State<PatientsScreen> {
                     ),
                     Row(
                       children: [
-                        _buildActionIcon(
-                            Icons.edit_outlined, AppColors.textPrimary),
+                        GestureDetector(
+                          onTap: () => _showUpdatePatientSheet(patient, index),
+                          child: _buildActionIcon(
+                              Icons.edit_outlined, AppColors.textPrimary),
+                        ),
                         const SizedBox(width: 8),
-                        _buildActionIcon(Icons.delete_outline, AppColors.error),
+                        GestureDetector(
+                          onTap: () => _showDeleteDialog(
+                              patient['name'] as String, index),
+                          child: _buildActionIcon(
+                              Icons.delete_outline, AppColors.error),
+                        ),
                       ],
                     ),
                   ],
@@ -420,12 +462,155 @@ class _PatientsScreenState extends State<PatientsScreen> {
 
   Widget _buildActionIcon(IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      width: 38,
+      height: 38,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Icon(icon, color: color, size: 20),
+      child: Icon(icon, color: color, size: 18),
+    );
+  }
+
+  void _showUpdatePatientSheet(Map<String, dynamic> patient, int index) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => UpdatePatientSheet(
+        patient: patient,
+        onSave: (updatedPatient) {
+          setState(() {
+            _patients[index] = updatedPatient;
+          });
+        },
+      ),
+    );
+  }
+
+  void _showDeleteDialog(String patientName, int index) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFEF3F2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFD92D20),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.delete_outline, color: Colors.white, size: 36),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Delete patient',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                    children: [
+                      const TextSpan(text: 'Are you sure you want to delete\n'),
+                      TextSpan(
+                        text: patientName,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const TextSpan(text: '?'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(dialogContext),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            border: Border.all(color: const Color(0xFF008394)),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(
+                              color: Color(0xFF008394),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _patients.removeAt(index);
+                          });
+                          Navigator.pop(dialogContext);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF008394),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Yes, Delete',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
