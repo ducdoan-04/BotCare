@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'main_navigation.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -12,6 +13,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   bool _obscureOld = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
+  bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +27,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             _buildHeader(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -37,23 +41,23 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    _buildPasswordField('Enter old password', _obscureOld, () {
-                      setState(() {
-                        _obscureOld = !_obscureOld;
-                      });
-                    }),
-                    const SizedBox(height: 16),
-                    _buildPasswordField('Enter new password', _obscureNew, () {
-                      setState(() {
-                        _obscureNew = !_obscureNew;
-                      });
-                    }),
-                    const SizedBox(height: 16),
-                    _buildPasswordField('Confirm new password', _obscureConfirm, () {
-                      setState(() {
-                        _obscureConfirm = !_obscureConfirm;
-                      });
-                    }),
+                    _buildPasswordField(
+                      hintText: 'Enter old password',
+                      isObscured: _obscureOld,
+                      toggleVisibility: () => setState(() => _obscureOld = !_obscureOld),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildPasswordField(
+                      hintText: 'Enter new password',
+                      isObscured: _obscureNew,
+                      toggleVisibility: () => setState(() => _obscureNew = !_obscureNew),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildPasswordField(
+                      hintText: 'Confirm new password',
+                      isObscured: _obscureConfirm,
+                      toggleVisibility: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                    ),
                   ],
                 ),
               ),
@@ -79,41 +83,60 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back, size: 20, color: AppColors.textPrimary),
+              child: const Icon(Icons.arrow_back,
+                  size: 20, color: AppColors.textPrimary),
             ),
           ),
           const SizedBox(width: 16),
           const Text(
             'Change password',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPasswordField(String hint, bool isObscured, VoidCallback toggleVisibility) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC), // slightly darker than plain white
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: TextField(
-        obscureText: isObscured,
-        style: const TextStyle(fontSize: 15, color: AppColors.textPrimary),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(color: AppColors.textLight, fontSize: 15),
-          border: InputBorder.none,
-          suffixIcon: GestureDetector(
-            onTap: toggleVisibility,
-            child: Icon(
-              isObscured ? Icons.visibility : Icons.visibility_off,
-              color: AppColors.textPrimary,
-              size: 20,
-            ),
+  Widget _buildPasswordField({
+    required String hintText,
+    required bool isObscured,
+    required VoidCallback toggleVisibility,
+  }) {
+    return TextFormField(
+      obscureText: isObscured,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(
+          color: Color(0xFFA0A5A9),
+          fontWeight: FontWeight.w500,
+          fontSize: 15,
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF9F9F9),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            isObscured ? Icons.visibility : Icons.visibility_off,
+            color: const Color(0xFF10141A),
+            size: 20,
           ),
+          onPressed: toggleVisibility,
         ),
       ),
     );
@@ -121,7 +144,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Widget _buildBottomBar(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
+      padding: EdgeInsets.fromLTRB(
+          24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
       decoration: const BoxDecoration(
         color: Colors.transparent,
       ),
@@ -140,9 +164,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 side: const BorderSide(color: Color(0xFF007A8A), width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24)),
               ),
-              child: const Text('Cancel', style: TextStyle(color: Color(0xFF007A8A), fontSize: 16, fontWeight: FontWeight.w600)),
+              child: const Text('Cancel',
+                  style: TextStyle(
+                      color: Color(0xFF007A8A),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
             ),
           ),
           const SizedBox(width: 16),
@@ -153,16 +182,22 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   context,
                   isSuccess: true,
                   title: 'Successfully',
-                  message: 'Your password was changed successfully.\nYour account is now more secure.',
+                  message:
+                      'Your password was changed successfully.\nYour account is now more secure.',
                 );
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: const Color(0xFF007A8A),
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24)),
               ),
-              child: const Text('Reset Password', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+              child: const Text('Reset Password',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -170,13 +205,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 
-  void _showStatusDialog(BuildContext context, {required bool isSuccess, required String title, required String message}) {
+  void _showStatusDialog(BuildContext context,
+      {required bool isSuccess,
+      required String title,
+      required String message}) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
           backgroundColor: Colors.white,
           child: Padding(
             padding: const EdgeInsets.all(32.0),
@@ -186,13 +225,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: isSuccess ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE), // very light green/red
+                    color: isSuccess
+                        ? const Color(0xFFE8F5E9)
+                        : const Color(0xFFFFEBEE), // very light green/red
                     shape: BoxShape.circle,
                   ),
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: isSuccess ? const Color(0xFF10B981) : const Color(0xFFD94625), // Green vs Darkish Red (from design)
+                      color: isSuccess
+                          ? const Color(0xFF10B981)
+                          : const Color(
+                              0xFFD94625), // Green vs Darkish Red (from design)
                       shape: BoxShape.circle,
                     ),
                     // Used check icon instead of trash bin for success, since it makes more logical sense
@@ -206,13 +250,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 const SizedBox(height: 24),
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
+                  style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                      height: 1.5),
                 ),
                 const SizedBox(height: 32),
                 if (isSuccess)
@@ -228,9 +278,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         backgroundColor: const Color(0xFF007A8A),
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
                       ),
-                      child: const Text('Back to Dashboard', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                      child: const Text('Back to Dashboard',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600)),
                     ),
                   )
                 else
@@ -244,25 +299,37 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                           },
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: const BorderSide(color: Color(0xFF007A8A), width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            side: const BorderSide(
+                                color: Color(0xFF007A8A), width: 1.5),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24)),
                           ),
-                          child: const Text('Back to Dashboard', style: TextStyle(color: Color(0xFF007A8A), fontSize: 13, fontWeight: FontWeight.w600)),
+                          child: const Text('Back to Dashboard',
+                              style: TextStyle(
+                                  color: Color(0xFF007A8A),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600)),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pop(ctx); // Just close the dialog to try again
+                            Navigator.pop(
+                                ctx); // Just close the dialog to try again
                           },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             backgroundColor: const Color(0xFF007A8A),
                             elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24)),
                           ),
-                          child: const Text('Try Again', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                          child: const Text('Try Again',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600)),
                         ),
                       ),
                     ],

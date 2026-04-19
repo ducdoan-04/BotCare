@@ -243,7 +243,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           status: 'Canceled',
           cardStyle: 'white',
         ),
-        const SizedBox(height: 80),
+        const SizedBox(height: 10),
       ],
     );
   }

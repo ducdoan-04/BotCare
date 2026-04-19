@@ -65,116 +65,131 @@ class _PatientsScreenState extends State<PatientsScreen> {
   }
 
   Widget _buildPopulatedState() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // App Bar
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 24, right: 24, top: 24, bottom: 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Patient',
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
+              // App Bar
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildHeaderIcon(Icons.search),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NotificationScreen(),
+                  Text(
+                    'Patient',
+                    style: Theme.of(context).textTheme.displayLarge,
+                  ),
+                  Row(
+                    children: [
+                      _buildHeaderIcon(Icons.search),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationScreen(),
+                            ),
+                          );
+                        },
+                        child: _buildHeaderIcon(Icons.notifications_none),
                       ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => const AddPatientScreen(),
+                          );
+                        },
+                        child: _buildHeaderIcon(Icons.add,
+                            color: AppColors.primary, iconColor: Colors.white),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Date section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      _buildHeaderIcon(Icons.calendar_today_outlined),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Today',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '22 December 2026',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Total Patient Card
+                _buildStatsCard(
+                  context,
+                  title: 'Total patient',
+                  value: '800',
+                  statsPercent: '-2.8%',
+                  statsDesc: 'Have decreased from yesterday',
+                  isIncrease: false,
+                  iconData: Icons.add,
+                ),
+                const SizedBox(height: 16),
+
+                // Appointments Card
+                _buildStatsCard(
+                  context,
+                  title: 'Appointments',
+                  value: '260',
+                  statsPercent: '3.5%',
+                  statsDesc: 'Have increased from yesterday',
+                  isIncrease: true,
+                  iconData: Icons.arrow_outward,
+                ),
+                const SizedBox(height: 20),
+
+                // Patient List
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _patients.length,
+                  itemBuilder: (context, index) {
+                    final patient = _patients[index];
+                    return _buildPatientCard(
+                      context,
+                      patient,
+                      index,
                     );
                   },
-                  child: _buildHeaderIcon(Icons.notifications_none),
                 ),
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => const AddPatientScreen(),
-                      );
-                    },
-                    child: _buildHeaderIcon(Icons.add,
-                        color: AppColors.primary, iconColor: Colors.white),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
-
-          // Date section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  _buildHeaderIcon(Icons.calendar_today_outlined),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Today',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              Text(
-                '22 December 2026',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Total Patient Card
-          _buildStatsCard(
-            context,
-            title: 'Total patient',
-            value: '800',
-            statsPercent: '-2.8%',
-            statsDesc: 'Have decreased from yesterday',
-            isIncrease: false,
-            iconData: Icons.add,
-          ),
-          const SizedBox(height: 16),
-
-          // Appointments Card
-          _buildStatsCard(
-            context,
-            title: 'Appointments',
-            value: '260',
-            statsPercent: '3.5%',
-            statsDesc: 'Have increased from yesterday',
-            isIncrease: true,
-            iconData: Icons.arrow_outward,
-          ),
-          const SizedBox(height: 20),
-
-          // Patient List
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _patients.length,
-            itemBuilder: (context, index) {
-              final patient = _patients[index];
-              return _buildPatientCard(
-                context,
-                patient,
-                index,
-              );
-            },
-          ),
-          const SizedBox(height: 1),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -383,7 +398,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PatientInfoScreen(patient: patient, index: index),
+            builder: (context) =>
+                PatientInfoScreen(patient: patient, index: index),
           ),
         );
       },
@@ -436,18 +452,21 @@ class _PatientsScreenState extends State<PatientsScreen> {
                               style: Theme.of(context).textTheme.bodySmall),
                           Text(
                             patient['lastVisit'] as String,
-                            style:
-                                Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
-                                    ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
                           ),
                         ],
                       ),
                       Row(
                         children: [
                           GestureDetector(
-                            onTap: () => _showUpdatePatientSheet(patient, index),
+                            onTap: () =>
+                                _showUpdatePatientSheet(patient, index),
                             child: _buildActionIcon(
                                 Icons.edit_outlined, AppColors.textPrimary),
                           ),
@@ -511,7 +530,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
       context: context,
       builder: (dialogContext) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
@@ -529,7 +549,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
                       color: Color(0xFFD92D20),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.delete_outline, color: Colors.white, size: 36),
+                    child: const Icon(Icons.delete_outline,
+                        color: Colors.white, size: 36),
                   ),
                 ),
                 const SizedBox(height: 24),

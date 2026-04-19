@@ -22,7 +22,8 @@ class _AccountScreenState extends State<AccountScreen> {
             _buildHeader(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Column(
                   children: [
                     _buildProfileBox(context),
@@ -55,13 +56,17 @@ class _AccountScreenState extends State<AccountScreen> {
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back, size: 20, color: AppColors.textPrimary),
+              child: const Icon(Icons.arrow_back,
+                  size: 20, color: AppColors.textPrimary),
             ),
           ),
           const SizedBox(width: 16),
           const Text(
             'Account',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary),
           ),
         ],
       ),
@@ -80,12 +85,11 @@ class _AccountScreenState extends State<AccountScreen> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: Image.network(
-              'https://i.pravatar.cc/150?img=47', // Mock Image
+            child: Image.asset(
+              'images/avatars/avatar-1.jpg',
               width: 100,
               height: 100,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(width: 100, height: 100, color: Colors.grey.shade200),
             ),
           ),
           const SizedBox(width: 16),
@@ -98,13 +102,19 @@ class _AccountScreenState extends State<AccountScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF10B981)), // Green
+                        border:
+                            Border.all(color: const Color(0xFF10B981)), // Green
                       ),
-                      child: const Text('Available', style: TextStyle(color: Color(0xFF10B981), fontSize: 10, fontWeight: FontWeight.w600)),
+                      child: const Text('Available',
+                          style: TextStyle(
+                              color: Color(0xFF10B981),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600)),
                     ),
                     GestureDetector(
                       onTap: () {
@@ -116,28 +126,47 @@ class _AccountScreenState extends State<AccountScreen> {
                           color: Color(0xFF007A8A), // Teal
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.edit_outlined, color: Colors.white, size: 16),
+                        child: const Icon(Icons.edit_outlined,
+                            color: Colors.white, size: 16),
                       ),
                     )
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text('Nola Hawkins', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const Text('Nola Hawkins',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Text('Receptionist', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    const Text('Receptionist',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary)),
                     const SizedBox(width: 8),
-                    Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle)),
+                    Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                            color: Colors.grey, shape: BoxShape.circle)),
                     const SizedBox(width: 8),
-                    const Text('30 yrs old', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    const Text('30 yrs old',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: const [
-                    Text('Shift :  ', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                    Text('9AM - 2PM', style: TextStyle(fontSize: 12, color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+                    Text('Shift :  ',
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.textSecondary)),
+                    Text('9AM - 2PM',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold)),
                   ],
                 ),
               ],
@@ -154,7 +183,7 @@ class _AccountScreenState extends State<AccountScreen> {
       children: [
         _buildTabButton('Timetable', 0),
         _buildTabButton('Today Task', 1),
-        _buildTabButton('Information', 2),
+        _buildTabButton('Informartion', 2),
       ],
     );
   }
@@ -175,7 +204,9 @@ class _AccountScreenState extends State<AccountScreen> {
             color: isSelected ? const Color(0xFF161B22) : Colors.transparent,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isSelected ? const Color(0xFF161B22) : const Color(0xFFDCDFE3),
+              color: isSelected
+                  ? const Color(0xFF161B22)
+                  : const Color(0xFFDCDFE3),
             ),
           ),
           child: Center(
@@ -220,17 +251,31 @@ class _AccountScreenState extends State<AccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Working hours', style: TextStyle(fontSize: 16, color: AppColors.textPrimary)),
+              const Text('Working hours',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary)),
               const SizedBox(height: 16),
-              const Text('04h : 10m : 30s', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w500, color: AppColors.textPrimary, letterSpacing: 1.2)),
+              const Text('04h : 10m : 30s',
+                  style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                      letterSpacing: 1.2)),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   border: Border.all(color: const Color(0xFFEF4444)), // Red
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text('Clock Out', style: TextStyle(color: Color(0xFFEF4444), fontSize: 13, fontWeight: FontWeight.w500)),
+                child: const Text('Clock Out',
+                    style: TextStyle(
+                        color: Color(0xFFEF4444),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -247,22 +292,32 @@ class _AccountScreenState extends State<AccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Attendance report', style: TextStyle(fontSize: 16, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+              const Text('Attendance report',
+                  style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              const Text('Tracks attendance and punctuality efficiently.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              const Text('Tracks attendance and punctuality efficiently.',
+                  style:
+                      TextStyle(fontSize: 12, color: AppColors.textSecondary)),
               const SizedBox(height: 16),
               // Legend
               Row(
                 children: [
-                  const Text('Less', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  const Text('Less',
+                      style: TextStyle(
+                          fontSize: 12, color: AppColors.textSecondary)),
                   const SizedBox(width: 8),
-                  _buildLegendBox(const Color(0xFFE2E8F0)),
+                  _buildLegendBox(const Color(0xFFE5E7EB)),
                   const SizedBox(width: 4),
-                  _buildLegendBox(const Color(0xFF7DD3FC)),
+                  _buildLegendBox(const Color(0xFF67B5BE)),
                   const SizedBox(width: 4),
-                  _buildLegendBox(const Color(0xFF0284C7)), // Teal-ish dark
+                  _buildLegendBox(const Color(0xFF008394)), // Teal-ish dark
                   const SizedBox(width: 8),
-                  const Text('Full', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  const Text('Full',
+                      style: TextStyle(
+                          fontSize: 12, color: AppColors.textSecondary)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -282,23 +337,43 @@ class _AccountScreenState extends State<AccountScreen> {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(4),
+        border: color == const Color(0xFFE5E7EB)
+            ? Border.all(color: const Color(0xFFDCDFE3))
+            : null,
       ),
     );
   }
 
   Widget _buildAttendanceGrid() {
     // Mock simple row data
-    final hours = ['09.00 AM', '10.00 AM', '11.00 PM', '12.00 PM', '01.00 PM', '02.00 PM']; // Follows image typo PM for 11?
+    final hours = [
+      '09.00 AM',
+      '10.00 AM',
+      '11.00 PM',
+      '12.00 PM',
+      '01.00 PM',
+      '02.00 PM'
+    ]; // Follows image typo PM for 11?
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
     // Random colors to match mock
-    final cDark = const Color(0xFF007A8A); // primary
-    final cMed = const Color(0xFF7ACCD5); // primaryLight
+    final cDark = const Color(0xFF008394); // primary
+    final cMed = const Color(0xFF67B5BE); // primaryLight
     final cLight = const Color(0xFFE5E7EB); // gray 200
 
+    final mockGrid = [
+      [cDark, cMed, cDark, cMed, cLight, cMed, cDark],
+      [cDark, cDark, cMed, cDark, cMed, cDark, cMed],
+      [cMed, cDark, cMed, cLight, cDark, cMed, cDark],
+      [cDark, cDark, cLight, cDark, cDark, cMed, cDark],
+      [cDark, cLight, cMed, cDark, cMed, cDark, cLight],
+      [cLight, cDark, cDark, cMed, cDark, cDark, cDark],
+    ];
+
     Color getColor(int r, int c) {
-      if ((r + c) % 5 == 0) return cLight;
-      if ((r * c) % 3 == 0) return cMed;
+      if (r < mockGrid.length && c < mockGrid[0].length) {
+        return mockGrid[r][c];
+      }
       return cDark;
     }
 
@@ -311,7 +386,11 @@ class _AccountScreenState extends State<AccountScreen> {
               children: [
                 SizedBox(
                   width: 50,
-                  child: Text(hours[r], style: const TextStyle(fontSize: 8, color: AppColors.textSecondary)),
+                  child: Text(hours[r],
+                      style: const TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textSecondary)),
                 ),
                 Expanded(
                   child: Row(
@@ -324,6 +403,9 @@ class _AccountScreenState extends State<AccountScreen> {
                           decoration: BoxDecoration(
                             color: getColor(r, c),
                             borderRadius: BorderRadius.circular(6),
+                            border: getColor(r, c) == cLight
+                                ? Border.all(color: const Color(0xFFDCDFE3))
+                                : null,
                           ),
                         )
                     ],
@@ -343,7 +425,12 @@ class _AccountScreenState extends State<AccountScreen> {
                   for (var day in days)
                     SizedBox(
                       width: 24,
-                      child: Center(child: Text(day, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary))),
+                      child: Center(
+                          child: Text(day,
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textSecondary))),
                     )
                 ],
               ),
@@ -357,11 +444,16 @@ class _AccountScreenState extends State<AccountScreen> {
   Widget _buildTodayTaskTab() {
     return Column(
       children: [
-        _buildTaskCard('09:00 - 10:00 AM', 'Morning check-in & patient queue', 'Greet patients, log arrivals, prepare forms'),
-        _buildTaskCard('10:00 - 12:00 AM', 'Front desk operations', 'Handle calls, manage bookings, assist walk-ins'),
-        _buildTaskCard('02:00 - 04:00 PM', 'Appointment coordination', 'Manage schedules, confirm bookings, answer inquiries'),
-        _buildTaskCard('04:00 - 06:00 PM', 'Reception support', 'Guide patients, assist staff, handle walk-ins'),
-        _buildTaskCard('06:00 - 08:00 PM', 'End-of-day reporting', 'Summarize activities, update logs, report issues'),
+        _buildTaskCard('09:00 - 10:00 AM', 'Morning check-in & patient queue',
+            'Greet patients, log arrivals, prepare forms'),
+        _buildTaskCard('10:00 - 12:00 AM', 'Front desk operations',
+            'Handle calls, manage bookings, assist walk-ins'),
+        _buildTaskCard('02:00 - 04:00 PM', 'Appointment coordination',
+            'Manage schedules, confirm bookings, answer inquiries'),
+        _buildTaskCard('04:00 - 06:00 PM', 'Reception support',
+            'Guide patients, assist staff, handle walk-ins'),
+        _buildTaskCard('06:00 - 08:00 PM', 'End-of-day reporting',
+            'Summarize activities, update logs, report issues'),
       ],
     );
   }
@@ -378,11 +470,21 @@ class _AccountScreenState extends State<AccountScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(time, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          Text(time,
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.textPrimary)),
           const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary)),
           const SizedBox(height: 6),
-          Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text(subtitle,
+              style: const TextStyle(
+                  fontSize: 12, color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -392,10 +494,13 @@ class _AccountScreenState extends State<AccountScreen> {
     return Column(
       children: [
         _buildInfoCard(Icons.person_outline, 'Gender', 'Female'),
-        _buildInfoCard(Icons.email_outlined, 'Email', 'kathry.murp@example.com'),
+        _buildInfoCard(
+            Icons.email_outlined, 'Email', 'kathry.murp@example.com'),
         _buildInfoCard(Icons.phone_outlined, 'Phone number', '(704) 555-0127'),
-        _buildInfoCard(Icons.location_on_outlined, 'Address', '6391 Elgin St. Celina, Delaware 10299'),
-        _buildInfoCard(Icons.calendar_today_outlined, 'Joining date', 'March 15, 2020'),
+        _buildInfoCard(Icons.location_on_outlined, 'Address',
+            '6391 Elgin St. Celina, Delaware 10299'),
+        _buildInfoCard(
+            Icons.calendar_today_outlined, 'Joining date', 'March 15, 2020'),
         _buildInfoCard(
           Icons.file_copy_outlined,
           'Professional summary',
@@ -432,9 +537,18 @@ class _AccountScreenState extends State<AccountScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 4),
-                Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontStyle: FontStyle.italic)),
                 const SizedBox(height: 6),
-                Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary, height: 1.4)),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                        height: 1.4)),
               ],
             ),
           )
