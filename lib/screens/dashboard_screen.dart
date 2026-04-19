@@ -6,6 +6,7 @@ import 'account_screen.dart';
 import 'change_password_screen.dart';
 import 'splash_screen.dart';
 import 'notification_screen.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -99,6 +100,12 @@ class DashboardScreen extends StatelessWidget {
                                       MaterialPageRoute(
                                           builder: (_) =>
                                               const ChangePasswordScreen()));
+                                } else if (value == 3) {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (_) =>
+                                              const SettingsScreen()));
                                 } else if (value == 4) {
                                   Navigator.push(
                                       context,

@@ -45,8 +45,9 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   Flexible(
                     child: Text(
                       'Appointments',
-                      style: Theme.of(context).textTheme.displayLarge,
-                      // fontSize: 18,
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            fontSize: 26,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
