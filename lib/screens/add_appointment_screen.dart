@@ -105,9 +105,10 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
                     // --- STEP 2: DETAIL INFO ---
                     _buildDropdownField(
                       _selectedSpecialist ?? 'Choose specialist',
+                      isSelected: _selectedSpecialist != null,
                       onTap: () => _showOptionsSheet(
-                        'Choose specialist',
-                        ['Cardiology', 'Dermatology', 'Neurology', 'Pediatrics'],
+                        'Specialist',
+                        ['General Practitioners', 'Cardiology', 'Dermatology', 'Neurology', 'Pediatrics', 'Orthopedics', 'Ophthalmology'],
                         _selectedSpecialist,
                         (val) => setState(() => _selectedSpecialist = val),
                       ),
@@ -115,6 +116,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
                     const SizedBox(height: 16),
                     _buildDropdownField(
                       _selectedDoctor ?? 'Choose doctor',
+                      isSelected: _selectedDoctor != null,
                       onTap: () => _showOptionsSheet(
                         'Choose doctor',
                         ['Dr. Courtney Henry', 'Dr. Jane Cooper', 'Dr. Raj Patel'],
@@ -344,7 +346,7 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     );
   }
 
-  Widget _buildDropdownField(String hint, {required VoidCallback onTap}) {
+  Widget _buildDropdownField(String hint, {required VoidCallback onTap, bool isSelected = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -353,7 +355,14 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(hint, style: const TextStyle(color: AppColors.textLight, fontSize: 15)),
+            Text(
+              hint,
+              style: TextStyle(
+                color: isSelected ? AppColors.textPrimary : AppColors.textLight,
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
             const Icon(Icons.keyboard_arrow_down, color: AppColors.textPrimary),
           ],
         ),
@@ -361,16 +370,32 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     );
   }
 
+  String _formatDate(DateTime date) {
+    const list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    return "${list[date.month - 1]} ${date.day}, ${date.year}";
+  }
+
   Widget _buildDateField() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: const Color(0xFFF9F9F9), borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('Choose date', style: TextStyle(color: AppColors.textLight, fontSize: 15)),
-          const Icon(Icons.calendar_month_outlined, color: AppColors.textPrimary),
-        ],
+    bool isSelected = _selectedDate != null;
+    return GestureDetector(
+      onTap: () => _showDatePickerSheet(),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: const Color(0xFFF9F9F9), borderRadius: BorderRadius.circular(16)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              isSelected ? _formatDate(_selectedDate!) : 'Choose date',
+              style: TextStyle(
+                color: isSelected ? AppColors.textPrimary : AppColors.textLight,
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+              )
+            ),
+            const Icon(Icons.calendar_month_outlined, color: AppColors.textPrimary),
+          ],
+        ),
       ),
     );
   }
@@ -394,30 +419,37 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
     );
   }
 
-  void _showOptionsSheet(String title, List<String> options, String? current, Function(String) onSelect) {
+  void _showOptionsSheet(
+    String title,
+    List<String> options,
+    String? current,
+    Function(String) onSelect,
+  ) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            ),
-            ...options.map((opt) => ListTile(
-              title: Text(opt),
-              trailing: opt == current ? const Icon(Icons.check, color: AppColors.primary) : null,
-              onTap: () {
-                onSelect(opt);
-                Navigator.pop(context);
-              },
-            )),
-            const SizedBox(height: 24),
-          ],
-        ),
+      builder: (context) => _SpecialistPickerSheet(
+        title: title,
+        options: options,
+        current: current,
+        onSelect: onSelect,
+      ),
+    );
+  }
+
+
+
+  void _showDatePickerSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _DatePickerSheet(
+        current: _selectedDate,
+        onSelect: (date) {
+            setState(() => _selectedDate = date);
+        },
       ),
     );
   }
@@ -451,5 +483,472 @@ class _AddAppointmentScreenState extends State<AddAppointmentScreen> {
         ),
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Picker Sheet — matches Figma "Specialist" design
+// ─────────────────────────────────────────────
+class _SpecialistPickerSheet extends StatefulWidget {
+  final String title;
+  final List<String> options;
+  final String? current;
+  final Function(String) onSelect;
+
+  const _SpecialistPickerSheet({
+    required this.title,
+    required this.options,
+    required this.current,
+    required this.onSelect,
+  });
+
+  @override
+  State<_SpecialistPickerSheet> createState() => _SpecialistPickerSheetState();
+}
+
+class _SpecialistPickerSheetState extends State<_SpecialistPickerSheet> {
+  late String? _tempSelected;
+
+  @override
+  void initState() {
+    super.initState();
+    _tempSelected = widget.current;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.75,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E0E0),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF2F4F7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_back,
+                        size: 18, color: Color(0xFF1A1A2E)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  widget.title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(color: Color(0xFFF2F4F7), height: 1),
+
+          // Options list
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: widget.options.length,
+            separatorBuilder: (_, __) => const Divider(
+                color: Color(0xFFF2F4F7), height: 1, indent: 20, endIndent: 20),
+            itemBuilder: (context, index) {
+              final opt = widget.options[index];
+              final isSelected = _tempSelected == opt;
+              return InkWell(
+                onTap: () => setState(() => _tempSelected = opt),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        opt,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: isSelected
+                              ? const Color(0xFF008394)
+                              : const Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      isSelected
+                          ? Container(
+                              width: 22,
+                              height: 22,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF008394),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.check,
+                                  size: 14, color: Colors.white),
+                            )
+                          : Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: const Color(0xFFD0D5DD), width: 1.5),
+                              ),
+                            ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+
+          // Choose button
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+            child: GestureDetector(
+              onTap: () {
+                if (_tempSelected != null) {
+                  widget.onSelect(_tempSelected!);
+                  Navigator.pop(context);
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: _tempSelected != null
+                      ? const Color(0xFF008394)
+                      : const Color(0xFFB0BEC5),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                alignment: Alignment.center,
+                child: const Text(
+                  'Choose',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Date Picker Sheet — matches Figma "Visit date"
+// ─────────────────────────────────────────────
+class _DatePickerSheet extends StatefulWidget {
+  final DateTime? current;
+  final Function(DateTime) onSelect;
+
+  const _DatePickerSheet({required this.current, required this.onSelect});
+
+  @override
+  State<_DatePickerSheet> createState() => _DatePickerSheetState();
+}
+
+class _DatePickerSheetState extends State<_DatePickerSheet> {
+  late DateTime? _tempDate;
+  final ScrollController _scrollController = ScrollController();
+  
+  // Create a list of 12 months starting from current month
+  late List<DateTime> _months;
+
+  @override
+  void initState() {
+    super.initState();
+    _tempDate = widget.current;
+    
+    // Generate current month + next 11 months
+    DateTime now = DateTime.now();
+    _months = List.generate(12, (index) {
+        int year = now.year + (now.month + index - 1) ~/ 12;
+        int month = (now.month + index - 1) % 12 + 1;
+        return DateTime(year, month, 1);
+    });
+  }
+  
+  String _formatFullDate(DateTime? date) {
+      if (date == null) return "Not selected";
+      const list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      return "${list[date.month - 1]} ${date.day}, ${date.year}";
+  }
+  
+  String _getMonthName(int month) {
+      const list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      return list[month - 1];
+  }
+
+  int _getDaysInMonth(int year, int month) {
+      if (month == 2) {
+          bool isLeapYear = (year % 4 == 0) && (year % 100 != 0 || year % 400 == 0);
+          return isLeapYear ? 29 : 28;
+      }
+      const days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      return days[month - 1];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E0E0),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF2F4F7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_back, size: 18, color: Color(0xFF1A1A2E)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Text(
+                  'Visit date',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          const Divider(color: Color(0xFFF2F4F7), height: 1),
+          
+          // Calendar List
+          Expanded(
+              child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  itemCount: _months.length,
+                  itemBuilder: (context, index) {
+                      return _buildMonthGrid(_months[index]);
+                  },
+              )
+          ),
+          
+          const Divider(color: Color(0xFFF2F4F7), height: 1),
+          
+          // Footer Selection
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            child: Row(
+                children: [
+                    Expanded(
+                        flex: 1,
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                                const Text("Visit date:", style: TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.bold, fontSize: 13)),
+                                const SizedBox(height: 4),
+                                Text(_formatFullDate(_tempDate), style: const TextStyle(color: Color(0xFFA0A5A9), fontSize: 13)),
+                            ],
+                        ),
+                    ),
+                    Expanded(
+                        flex: 1,
+                        child: GestureDetector(
+                            onTap: () {
+                                if (_tempDate != null) {
+                                    widget.onSelect(_tempDate!);
+                                    Navigator.pop(context);
+                                }
+                            },
+                            child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                decoration: BoxDecoration(
+                                    color: _tempDate != null ? const Color(0xFF008394) : const Color(0xFFB0BEC5),
+                                    borderRadius: BorderRadius.circular(30),
+                                ),
+                                alignment: Alignment.center,
+                                child: const Text(
+                                    'Choose',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ]
+            ),
+          ),
+        ]
+      ),
+    );
+  }
+  
+  Widget _buildMonthGrid(DateTime monthDate) {
+      int year = monthDate.year;
+      int month = monthDate.month;
+      
+      int daysInThisMonth = _getDaysInMonth(year, month);
+      int firstDayOfWeek = DateTime(year, month, 1).weekday; // 1 = Monday, 7 = Sunday
+      
+      // Calculate days in previous month for padding
+      int prevMonth = month == 1 ? 12 : month - 1;
+      int prevYear = month == 1 ? year - 1 : year;
+      int daysInPrevMonth = _getDaysInMonth(prevYear, prevMonth);
+      
+      // Days to show from previous month
+      int paddingStart = firstDayOfWeek - 1; 
+      
+      // Total grid cells needed (rows * 7)
+      int totalCells = paddingStart + daysInThisMonth;
+      int rows = (totalCells / 7).ceil();
+      if (totalCells % 7 != 0) rows++; // Fix for partial last row
+      totalCells = rows * 7;
+      
+      List<Widget> dayWidgets = [];
+      
+      for (int i = 0; i < totalCells; i++) {
+          if (i < paddingStart) {
+              // Previous month days
+              int day = daysInPrevMonth - paddingStart + 1 + i;
+              dayWidgets.add(_buildDayCell(day, isCurrentMonth: false, fullDate: null));
+          } else if (i < paddingStart + daysInThisMonth) {
+              // Current month days
+              int day = i - paddingStart + 1;
+              DateTime currentDate = DateTime(year, month, day);
+              
+              bool isSelected = _tempDate != null && 
+                  _tempDate!.year == currentDate.year &&
+                  _tempDate!.month == currentDate.month &&
+                  _tempDate!.day == currentDate.day;
+                  
+              dayWidgets.add(_buildDayCell(day, isCurrentMonth: true, isSelected: isSelected, fullDate: currentDate));
+          } else {
+              // Next month days
+              int day = i - (paddingStart + daysInThisMonth) + 1;
+              dayWidgets.add(_buildDayCell(day, isCurrentMonth: false, fullDate: null));
+          }
+      }
+      
+      return Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                  Text(
+                      "${_getMonthName(month)} $year",
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Color(0xFF1A1A2E))
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((d) {
+                          return Expanded(
+                              child: Center(
+                                  child: Text(d, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF6B7280)))
+                              )
+                          );
+                      }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  GridView.count(
+                      crossAxisCount: 7,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 1.0,
+                      children: dayWidgets,
+                  ),
+              ],
+          ),
+      );
+  }
+  
+  Widget _buildDayCell(int day, {required bool isCurrentMonth, bool isSelected = false, DateTime? fullDate}) {
+      return GestureDetector(
+          onTap: () {
+              if (isCurrentMonth && fullDate != null) {
+                  setState(() => _tempDate = fullDate);
+              }
+          },
+          child: Container(
+              margin: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFF008394) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                  day.toString(),
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: isSelected ? FontWeight.bold : (isCurrentMonth ? FontWeight.w500 : FontWeight.normal),
+                      color: isSelected ? Colors.white : (isCurrentMonth ? const Color(0xFF1A1A2E) : const Color(0xFFA0A5A9))
+                  )
+              ),
+          ),
+      );
   }
 }
