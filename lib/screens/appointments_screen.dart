@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'add_appointment_screen.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -17,6 +18,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     });
   }
 
+  void _showNewAppointmentSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AddAppointmentScreen(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -25,7 +35,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // App Bar
+            // --- FIXED HEADER PART ---
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
@@ -35,6 +45,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                     child: Text(
                       'Appointments',
                       style: Theme.of(context).textTheme.displayLarge,
+                      // fontSize: 18,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -64,7 +75,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       ),
                       const SizedBox(width: 12),
                       GestureDetector(
-                        onTap: _toggleEmptyState, // Toggle for testing
+                        onTap: _showNewAppointmentSheet,
                         child: _buildHeaderIcon(Icons.add, color: AppColors.primary, iconColor: Colors.white),
                       ),
                     ],
@@ -73,7 +84,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               ),
             ),
             
-            // Summary Info Cards
+            // Summary Info Cards (Also Fixed)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Row(
@@ -88,7 +99,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Main Content Area
+            // --- SCROLLABLE CONTENT PART ---
             Expanded(
               child: Container(
                 decoration: const BoxDecoration(
@@ -109,64 +120,44 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/images/logo/logo-v1.png', 
-              height: 120,
-              color: AppColors.border, 
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'You don\'t have an appointment yet',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Click the + button to add a new appointment',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset('assets/images/logo/logo-v1.png', height: 120, color: AppColors.border),
+          const SizedBox(height: 24),
+          Text('You don\'t have an appointment yet', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          const Text('Click the + button to add a new appointment', style: TextStyle(color: AppColors.textSecondary)),
+        ],
       ),
     );
   }
 
   Widget _buildContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
       children: [
+        const SizedBox(height: 32),
         // Date Header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 32, 24, 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  _buildHeaderIcon(Icons.calendar_today_outlined),
-                  const SizedBox(width: 12),
-                  const Text('Today', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                ],
-              ),
-              const Text('22 Desember 2024', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-            ],
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                _buildHeaderIcon(Icons.calendar_today_outlined),
+                const SizedBox(width: 12),
+                const Text('Today', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              ],
+            ),
+            const Text('22 Desember 2024', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+          ],
         ),
+        const SizedBox(height: 20),
         
         // Doctors List
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Row(
             children: [
               _buildDoctorItem('Dr. Johan Henry', 'General Practitioners', 1),
@@ -182,67 +173,57 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         const SizedBox(height: 24),
 
         // Radio Buttons
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Row(
-            children: [
-              _buildRadioOption('Routine check-up', false),
-              const SizedBox(width: 24),
-              _buildRadioOption('Urgent visit', true),
-            ],
-          ),
+        Row(
+          children: [
+            _buildRadioOption('Routine check-up', false),
+            const SizedBox(width: 24),
+            _buildRadioOption('Urgent visit', true),
+          ],
         ),
         const SizedBox(height: 24),
 
         // Appointment Cards
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            children: [
-              _buildModernAppointmentCard(
-                time: '09.40 AM',
-                type: 'Routine check up',
-                patient: 'Jacob Jones',
-                doctor: 'Dr. Courtney Henry',
-                status: 'Confirm',
-                cardStyle: 'white',
-              ),
-              _buildModernAppointmentCard(
-                time: '09.40 AM',
-                type: 'Dermatology consultation',
-                patient: 'Jenny Wilson',
-                doctor: 'Dr. Jane Cooper',
-                status: 'Pending',
-                cardStyle: 'blue',
-              ),
-              _buildModernAppointmentCard(
-                time: '09.40 AM',
-                type: 'Routine check up',
-                patient: 'Albert Flores',
-                doctor: 'Dr. Raj Patel',
-                status: 'Canceled',
-                cardStyle: 'white',
-              ),
-              _buildModernAppointmentCard(
-                time: '10.40 AM',
-                type: 'Physical therapy',
-                patient: 'Esther Howard',
-                doctor: 'Dr. Brooklyn S',
-                status: 'Confirm',
-                cardStyle: 'blue',
-              ),
-              _buildModernAppointmentCard(
-                time: '10.40 AM',
-                type: 'Allergy test',
-                patient: 'Annette Black',
-                doctor: 'Dr. Theresa Webb',
-                status: 'Canceled',
-                cardStyle: 'white',
-              ),
-              const SizedBox(height: 80),
-            ],
-          ),
+        _buildModernAppointmentCard(
+          time: '09.40 AM',
+          type: 'Routine check up',
+          patient: 'Jacob Jones',
+          doctor: 'Dr. Courtney Henry',
+          status: 'Confirm',
+          cardStyle: 'white',
         ),
+        _buildModernAppointmentCard(
+          time: '09.40 AM',
+          type: 'Dermatology consultation',
+          patient: 'Jenny Wilson',
+          doctor: 'Dr. Jane Cooper',
+          status: 'Pending',
+          cardStyle: 'blue',
+        ),
+        _buildModernAppointmentCard(
+          time: '09.40 AM',
+          type: 'Routine check up',
+          patient: 'Albert Flores',
+          doctor: 'Dr. Raj Patel',
+          status: 'Canceled',
+          cardStyle: 'white',
+        ),
+        _buildModernAppointmentCard(
+          time: '10.40 AM',
+          type: 'Physical therapy',
+          patient: 'Esther Howard',
+          doctor: 'Dr. Brooklyn S',
+          status: 'Confirm',
+          cardStyle: 'blue',
+        ),
+        _buildModernAppointmentCard(
+          time: '10.40 AM',
+          type: 'Allergy test',
+          patient: 'Annette Black',
+          doctor: 'Dr. Theresa Webb',
+          status: 'Canceled',
+          cardStyle: 'white',
+        ),
+        const SizedBox(height: 80),
       ],
     );
   }
