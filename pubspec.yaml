@@ -27,6 +27,7 @@ flutter:
     - assets/images/
     - assets/images/screens/
     - assets/images/logo/
+    - assets/images/avatars/
     - assets/images/avatars-doctor/
     - assets/images/avatars-patient/
     - assets/images/avatars-staff/
