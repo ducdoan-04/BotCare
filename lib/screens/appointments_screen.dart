@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'add_appointment_screen.dart';
+import 'appointment_details_sheet.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -67,7 +68,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF04438),
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
+                                border:
+                                    Border.all(color: Colors.white, width: 2),
                               ),
                             ),
                           ),
@@ -76,24 +78,31 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                       const SizedBox(width: 12),
                       GestureDetector(
                         onTap: _showNewAppointmentSheet,
-                        child: _buildHeaderIcon(Icons.add, color: AppColors.primary, iconColor: Colors.white),
+                        child: _buildHeaderIcon(Icons.add,
+                            color: AppColors.primary, iconColor: Colors.white),
                       ),
                     ],
                   ),
                 ],
               ),
             ),
-            
+
             // Summary Info Cards (Also Fixed)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Row(
                 children: [
-                  Expanded(child: _buildSummaryCard(_isEmpty ? '0' : '260', 'Total')),
+                  Expanded(
+                      child:
+                          _buildSummaryCard(_isEmpty ? '0' : '260', 'Total')),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildSummaryCard(_isEmpty ? '0' : '140', 'Completed')),
+                  Expanded(
+                      child: _buildSummaryCard(
+                          _isEmpty ? '0' : '140', 'Completed')),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildSummaryCard(_isEmpty ? '0' : '400', 'Canceled')),
+                  Expanded(
+                      child: _buildSummaryCard(
+                          _isEmpty ? '0' : '400', 'Canceled')),
                 ],
               ),
             ),
@@ -123,11 +132,17 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset('assets/images/logo/logo-v1.png', height: 120, color: AppColors.border),
+          Image.asset('assets/images/logo/logo-v1.png',
+              height: 120, color: AppColors.border),
           const SizedBox(height: 24),
-          Text('You don\'t have an appointment yet', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          Text('You don\'t have an appointment yet',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          const Text('Click the + button to add a new appointment', style: TextStyle(color: AppColors.textSecondary)),
+          const Text('Click the + button to add a new appointment',
+              style: TextStyle(color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -147,14 +162,19 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               children: [
                 _buildHeaderIcon(Icons.calendar_today_outlined),
                 const SizedBox(width: 12),
-                const Text('Today', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const Text('Today',
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary)),
               ],
             ),
-            const Text('22 Desember 2024', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+            const Text('22 Desember 2024',
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
           ],
         ),
         const SizedBox(height: 20),
-        
+
         // Doctors List
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -162,11 +182,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
             children: [
               _buildDoctorItem('Dr. Johan Henry', 'General Practitioners', 1),
               const SizedBox(width: 24),
-              _buildDoctorItem('Dr. David', 'Cardiolog', 2), 
+              _buildDoctorItem('Dr. David', 'Cardiolog', 2),
               const SizedBox(width: 24),
-              _buildDoctorItem('Dr. Sarah', 'Dermatology', 3), 
+              _buildDoctorItem('Dr. Sarah', 'Dermatology', 3),
               const SizedBox(width: 24),
-              _buildDoctorItem('Dr. Henry', 'Pediatrics', 4), 
+              _buildDoctorItem('Dr. Henry', 'Pediatrics', 4),
             ],
           ),
         ),
@@ -240,7 +260,8 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 image: DecorationImage(
-                  image: AssetImage('assets/images/avatars-doctor/avatar-$avatarId.jpg'),
+                  image:
+                      AssetImage('images/avatars-doctor/avatar-$avatarId.jpg'),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -264,9 +285,15 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
+            Text(name,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: AppColors.textPrimary)),
             const SizedBox(height: 4),
-            Text(type, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+            Text(type,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 13)),
           ],
         ),
       ],
@@ -286,16 +313,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
               width: 1.5,
             ),
           ),
-          child: isTeal ? Center(
-            child: Container(
-              width: 10,
-              height: 10,
-              decoration: const BoxDecoration(
-                color: Color(0xFF6AB1B8),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ) : null,
+          child: isTeal
+              ? Center(
+                  child: Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF6AB1B8),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                )
+              : null,
         ),
         const SizedBox(width: 8),
         Text(
@@ -316,9 +345,11 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: color ?? Colors.white,
-        border: color == null ? Border.all(color: const Color(0xFFF3F4F6)) : null,
+        border:
+            color == null ? Border.all(color: const Color(0xFFF3F4F6)) : null,
       ),
-      child: Icon(iconData, color: iconColor ?? AppColors.textPrimary, size: 22),
+      child:
+          Icon(iconData, color: iconColor ?? AppColors.textPrimary, size: 22),
     );
   }
 
@@ -333,14 +364,18 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         children: [
           Text(
             value,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary),
           ),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               label,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
           ),
         ],
@@ -359,7 +394,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     Color statusColor;
     Color statusBgColor;
     Color statusBorderColor;
-    
+
     if (status == 'Confirm') {
       statusColor = AppColors.success;
       statusBgColor = Colors.transparent;
@@ -368,93 +403,110 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
       statusColor = AppColors.textSecondary;
       statusBgColor = const Color(0xFFE5E7EB);
       statusBorderColor = const Color(0xFFD1D5DB);
-    } else { // Canceled
+    } else {
+      // Canceled
       statusColor = const Color(0xFFF04438);
       statusBgColor = Colors.transparent;
       statusBorderColor = const Color(0xFFF04438).withOpacity(0.5);
     }
 
-    Color cardBgColor = cardStyle == 'white' ? Colors.white : const Color(0xFFE2F0F2);
-    Color cardBorderColor = cardStyle == 'white' ? const Color(0xFFF3F4F6) : AppColors.primary;
+    Color cardBgColor =
+        cardStyle == 'white' ? Colors.white : const Color(0xFFE2F0F2);
+    Color cardBorderColor =
+        cardStyle == 'white' ? const Color(0xFFF3F4F6) : AppColors.primary;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: cardBgColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: cardBorderColor,
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => const AppointmentDetailsSheet(),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: cardBgColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: cardBorderColor,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                time,
-                style: const TextStyle(fontSize: 18, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusBgColor,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: statusBorderColor),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  time,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w500),
                 ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusBgColor,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: statusBorderColor),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            type,
-            style: const TextStyle(
-              fontSize: 15,
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w400,
+              ],
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Text(
-                patient,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppColors.textPrimary,
-                ),
+            const SizedBox(height: 16),
+            Text(
+              type,
+              style: const TextStyle(
+                fontSize: 15,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w400,
               ),
-              const SizedBox(width: 8),
-              Container(
-                width: 4,
-                height: 4,
-                decoration: const BoxDecoration(
-                  color: AppColors.textLight,
-                  shape: BoxShape.circle,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(
+                  patient,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                doctor,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+                const SizedBox(width: 8),
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color: AppColors.textLight,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                Text(
+                  doctor,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
