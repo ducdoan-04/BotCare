@@ -3,6 +3,7 @@ import '../theme/app_colors.dart';
 import 'notification_screen.dart';
 import 'staff_detail_screen.dart';
 import 'update_staff_screen.dart';
+import 'add_staff_screen.dart';
 
 class StaffScreen extends StatefulWidget {
   const StaffScreen({super.key});
@@ -142,9 +143,7 @@ class _StaffScreenState extends State<StaffScreen> {
                   ),
                   const SizedBox(height: 32),
                   GestureDetector(
-                    onTap: () {
-                      // Handle Add new staff
-                    },
+                    onTap: _showAddStaffSheet,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 24, vertical: 12),
@@ -215,9 +214,7 @@ class _StaffScreenState extends State<StaffScreen> {
                   ),
                   const SizedBox(width: 12),
                   GestureDetector(
-                    onTap: () {
-                      // Navigate to add new staff
-                    },
+                    onTap: _showAddStaffSheet,
                     child: _buildHeaderIcon(Icons.add,
                         color: AppColors.primary, iconColor: Colors.white),
                   ),
@@ -486,6 +483,21 @@ class _StaffScreenState extends State<StaffScreen> {
         onSave: (updatedStaff) {
           setState(() {
             _staff[index] = updatedStaff;
+          });
+        },
+      ),
+    );
+  }
+
+  void _showAddStaffSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AddStaffSheet(
+        onSave: (newStaff) {
+          setState(() {
+            _staff.insert(0, newStaff);
           });
         },
       ),
