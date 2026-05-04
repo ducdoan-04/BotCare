@@ -4,6 +4,7 @@ import 'notification_screen.dart';
 import 'doctor_detail_screen.dart';
 import 'update_doctor_screen.dart';
 import 'add_doctor_screen.dart';
+import '../services/doctor_service.dart';
 
 class DoctorsScreen extends StatefulWidget {
   const DoctorsScreen({super.key});
@@ -13,14 +14,40 @@ class DoctorsScreen extends StatefulWidget {
 }
 
 class _DoctorsScreenState extends State<DoctorsScreen> {
-  final List<Map<String, dynamic>> _doctors = [
-    {'name': 'Dr. Dianne Russell', 'specialty': 'General Practitioner', 'time': '9AM - 2PM', 'avatar': 1, 'isAvailable': true},
-    {'name': 'Dr. Jacob Jones', 'specialty': 'Cardiology', 'time': '9AM - 2PM', 'avatar': 2, 'isAvailable': true},
-    {'name': 'Dr. Mona Flores', 'specialty': 'Dermatology', 'time': '9AM - 2PM', 'avatar': 3, 'isAvailable': true},
-    {'name': 'Dr. Alicia Wexer', 'specialty': 'Dermatology', 'time': '9AM - 2PM', 'avatar': 4, 'isAvailable': true},
-    {'name': 'Dr. Leslie Alexander', 'specialty': 'General Practitioner', 'time': '2PM - 7PM', 'avatar': 5, 'isAvailable': false},
-    {'name': 'Dr. Kathryn Murphy', 'specialty': 'Cardiology', 'time': '9AM - 2PM', 'avatar': 6, 'isAvailable': true},
-  ];
+  List<Map<String, dynamic>> _doctors = [];
+  bool _isLoading = true;
+  String _selectedCategory = 'All';
+  final DoctorService _doctorService = DoctorService();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDoctors();
+  }
+
+  Future<void> _fetchDoctors() async {
+    setState(() => _isLoading = true);
+    final data = await _doctorService.getAllDoctors();
+    if (mounted) {
+      setState(() {
+        _doctors = List<Map<String, dynamic>>.from(data);
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> get _filteredDoctors {
+    if (_selectedCategory == 'All') return _doctors;
+    return _doctors
+        .where((d) =>
+            (d['specialty'] ?? '').toString().toLowerCase().contains(
+                  _selectedCategory.toLowerCase(),
+                ) ||
+            (d['department'] ?? '').toString().toLowerCase().contains(
+                  _selectedCategory.toLowerCase(),
+                ))
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,13 +84,15 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                       ),
                       const SizedBox(width: 12),
                       GestureDetector(
-                        onTap: () {
-                          showModalBottomSheet(
+                        onTap: () async {
+                          await showModalBottomSheet(
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.transparent,
-                            builder: (context) => const AddDoctorScreen(),
+                            builder: (_) => const AddDoctorScreen(),
                           );
+                          // Re-fetch after modal closes (whether saved or cancelled)
+                          _fetchDoctors();
                         },
                         child: _buildAddIcon(),
                       ),
@@ -72,20 +101,20 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                 ],
               ),
             ),
-            
+
             // --- CATEGORIES ---
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Row(
                 children: [
-                  _buildCategoryChip('All', true),
+                  _buildCategoryChip('All'),
                   const SizedBox(width: 12),
-                  _buildCategoryChip('General Practitioners', false),
+                  _buildCategoryChip('General Practitioners'),
                   const SizedBox(width: 12),
-                  _buildCategoryChip('Cardiology', false),
+                  _buildCategoryChip('Cardiology'),
                   const SizedBox(width: 12),
-                  _buildCategoryChip('Dermatology', false),
+                  _buildCategoryChip('Dermatology'),
                 ],
               ),
             ),
@@ -93,13 +122,92 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
             // --- DOCTORS LIST ---
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                itemCount: _doctors.length,
-                itemBuilder: (context, index) {
-                  return _buildDoctorCard(context, index);
-                },
-              ),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: Color(0xFF008394)),
+                    )
+                  : _filteredDoctors.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE6F2F3),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.person_outline,
+                                  size: 40,
+                                  color: Color(0xFF008394),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              const Text(
+                                'No doctors added yet',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Doctors will appear here once you\'ve\nadded them to the system.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: AppColors.textSecondary),
+                              ),
+                              const SizedBox(height: 24),
+                              GestureDetector(
+                                onTap: () async {
+                                  await showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => const AddDoctorScreen(),
+                                  );
+                                  _fetchDoctors();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(color: const Color(0xFF008394)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.add, color: Color(0xFF008394), size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'New Doctor',
+                                        style: TextStyle(
+                                          color: Color(0xFF008394),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _fetchDoctors,
+                          color: const Color(0xFF008394),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                            itemCount: _filteredDoctors.length,
+                            itemBuilder: (context, index) {
+                              return _buildDoctorCard(context, _filteredDoctors[index]);
+                            },
+                          ),
+                        ),
             ),
           ],
         ),
@@ -144,48 +252,53 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
       height: 44,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
-        color: Color(0xFF008394), // Specific Teal from design
+        color: Color(0xFF008394),
       ),
       child: const Icon(Icons.add, color: Colors.white, size: 24),
     );
   }
 
-  Widget _buildCategoryChip(String label, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF161B22) : Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: isSelected ? const Color(0xFF161B22) : AppColors.border,
+  Widget _buildCategoryChip(String label) {
+    final isSelected = _selectedCategory == label;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCategory = label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF161B22) : Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF161B22) : AppColors.border,
+          ),
         ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : AppColors.textSecondary,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-          fontSize: 15,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 15,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildDoctorCard(BuildContext context, int index) {
-    if (index >= _doctors.length) return const SizedBox.shrink();
-
-    final doctor = _doctors[index];
-    final bool isAvailable = doctor['isAvailable'] as bool;
-    final int avatarIndex = doctor['avatar'] as int;
+  Widget _buildDoctorCard(BuildContext context, Map<String, dynamic> doctor) {
+    final bool isAvailable =
+        doctor['availability']?.toString().toLowerCase().contains('available') ?? true;
+    final String avatarStr = doctor['avatar'] ?? '1';
+    final int avatarIndex = (int.tryParse(avatarStr) ?? 1).clamp(1, 6);
 
     return InkWell(
-      onTap: () {
-        Navigator.push(
+      borderRadius: BorderRadius.circular(32),
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => DoctorDetailScreen(doctor: doctor, index: index),
+            builder: (_) => DoctorDetailScreen(doctor: doctor, index: avatarIndex - 1),
           ),
         );
+        _fetchDoctors();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -197,128 +310,130 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-          // Avatar
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.bottomCenter,
-            children: [
-              Container(
-                width: 90,
-                height: 115,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
-                    image: AssetImage('images/avatars-doctor/avatar-$avatarIndex.jpg'),
-                    fit: BoxFit.cover,
-                    colorFilter: isAvailable 
-                        ? null 
-                        : const ColorFilter.mode(Colors.grey, BlendMode.saturation),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isAvailable ? const Color(0xFF05B93E) : AppColors.textSecondary.withOpacity(0.5),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    isAvailable ? 'Available' : 'Not Available',
-                    style: TextStyle(
-                      color: isAvailable ? const Color(0xFF05B93E) : AppColors.textSecondary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 20),
-          
-          // Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // Avatar with availability badge
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomCenter,
               children: [
-                Text(
-                  doctor['name']!,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                Container(
+                  width: 90,
+                  height: 115,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/avatars-doctor/avatar-$avatarIndex.jpg'),
+                      fit: BoxFit.cover,
+                      colorFilter: isAvailable
+                          ? null
+                          : const ColorFilter.mode(Colors.grey, BlendMode.saturation),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  doctor['specialty']!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textSecondary,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Today',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            doctor['time']!,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
+                Positioned(
+                  bottom: -10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isAvailable
+                            ? const Color(0xFF05B93E)
+                            : AppColors.textSecondary.withOpacity(0.5),
+                        width: 1,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => UpdateDoctorScreen(
-                            doctor: doctor,
-                            index: index,
-                          ),
-                        );
-                      },
-                      child: _buildActionIcon(Icons.edit_outlined),
+                    child: Text(
+                      isAvailable ? 'Available' : 'Not Available',
+                      style: TextStyle(
+                        color: isAvailable
+                            ? const Color(0xFF05B93E)
+                            : AppColors.textSecondary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => _showDeleteDialog(context, doctor['name']!, index),
-                      child: _buildActionIcon(Icons.delete_outline, isDelete: true),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(width: 20),
+
+            // Doctor info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    doctor['name'] ?? 'Unknown',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    doctor['specialty'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Today',
+                              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              doctor['workHours'] ?? '9AM - 5PM',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () async {
+                          await showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (_) => UpdateDoctorScreen(
+                              doctor: doctor,
+                              index: avatarIndex - 1,
+                            ),
+                          );
+                          _fetchDoctors();
+                        },
+                        child: _buildActionIcon(Icons.edit_outlined),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _showDeleteDialog(context, doctor),
+                        child: _buildActionIcon(Icons.delete_outline, isDelete: true),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildActionIcon(IconData icon, {bool isDelete = false}) {
     return Container(
@@ -329,7 +444,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -343,10 +458,13 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, String doctorName, int index) {
+  void _showDeleteDialog(BuildContext context, Map<String, dynamic> doctor) {
+    final doctorId = doctor['_id']?.toString();
+    final doctorName = doctor['name'] ?? 'this doctor';
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (dialogCtx) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
           child: Padding(
@@ -371,27 +489,21 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Delete',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  'Delete Doctor',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
-                const SizedBox(height: 16),
-                RichText(
+                const SizedBox(height: 12),
+                Text(
+                  'Are you sure you want to delete $doctorName?',
                   textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: const TextStyle(fontSize: 15, color: AppColors.textSecondary, height: 1.5),
-                    children: [
-                      const TextSpan(text: 'Are you sure you want to delete\n'),
-                      TextSpan(text: doctorName, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                      const TextSpan(text: '?'),
-                    ],
-                  ),
+                  style: const TextStyle(fontSize: 15, color: AppColors.textSecondary, height: 1.5),
                 ),
                 const SizedBox(height: 32),
                 Row(
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: () => Navigator.pop(dialogCtx),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           decoration: BoxDecoration(
@@ -410,11 +522,18 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _doctors.removeAt(index);
-                          });
-                          Navigator.pop(context);
+                        onTap: () async {
+                          Navigator.pop(dialogCtx);
+                          if (doctorId != null) {
+                            final success = await _doctorService.deleteDoctor(doctorId);
+                            if (success) {
+                              _fetchDoctors();
+                            } else if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Failed to delete doctor')),
+                              );
+                            }
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 16),

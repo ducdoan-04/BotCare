@@ -106,7 +106,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
               image: DecorationImage(
-                image: AssetImage('images/avatars-doctor/avatar-${widget.index + 1}.jpg'),
+                image: AssetImage('assets/images/avatars-doctor/avatar-${widget.index + 1}.jpg'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -447,13 +447,18 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   }
 
   Widget _buildSummaryTab() {
+    final totalPatients = widget.doctor['totalPatients']?.toString() ?? '230';
+    final surgeries = widget.doctor['surgeries']?.toString() ?? '90';
+    final rating = widget.doctor['rating']?.toString() ?? '4.5';
+    final reviewsCount = widget.doctor['reviewsCount']?.toString() ?? '120';
+
     return Column(
       children: [
-        _buildSummaryItem('Total patients', '230', '', Icons.people_outline, const Color(0xFF008394), const Color(0xFFE6F2F3), subtext: 'Have increased from yesterday', trendPercent: '3.5%'),
+        _buildSummaryItem('Total patients', totalPatients, '', Icons.people_outline, const Color(0xFF008394), const Color(0xFFE6F2F3), subtext: 'Have increased from yesterday', trendPercent: '3.5%'),
         const SizedBox(height: 16),
-        _buildSummaryItem('Surgeries', '90', '', Icons.colorize, const Color(0xFFD92D20), const Color(0xFFFEF3F2), subtext: 'Total space ready for use by the patient.'),
+        _buildSummaryItem('Surgeries', surgeries, '', Icons.colorize, const Color(0xFFD92D20), const Color(0xFFFEF3F2), subtext: 'Total space ready for use by the patient.'),
         const SizedBox(height: 16),
-        _buildSummaryItem('Reviews', '4.5', '/5.0', Icons.star_rounded, const Color(0xFFF79009), const Color(0xFFFFFAEB), subtext: 'Based on 120 reviews from patient.'),
+        _buildSummaryItem('Reviews', rating, '/5.0', Icons.star_rounded, const Color(0xFFF79009), const Color(0xFFFFFAEB), subtext: 'Based on $reviewsCount reviews from patient.'),
       ],
     );
   }

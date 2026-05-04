@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'select_country_screen.dart';
 import 'select_state_screen.dart';
+import '../services/doctor_service.dart';
 
 class UpdateDoctorScreen extends StatefulWidget {
   final Map<String, dynamic>? doctor;
@@ -18,6 +19,58 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
   String _selectedPhoneCountry = 'United States';
   String _selectedGender = 'Female';
   String? _selectedState = 'Alaska';
+  bool _isSaving = false;
+
+  late final TextEditingController _nameController;
+  late final TextEditingController _specialtyController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _cityController;
+  late final TextEditingController _zipController;
+
+  final DoctorService _doctorService = DoctorService();
+
+  @override
+  void initState() {
+    super.initState();
+    final doctor = widget.doctor ?? {};
+    _nameController = TextEditingController(text: doctor['name'] ?? '');
+    _specialtyController = TextEditingController(text: doctor['specialty'] ?? '');
+    _addressController = TextEditingController(text: '');
+    _cityController = TextEditingController(text: '');
+    _zipController = TextEditingController(text: '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _specialtyController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _zipController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateDoctor() async {
+    if (widget.doctor == null || widget.doctor!['_id'] == null) {
+      _showSuccessDialog(context);
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    final doctorData = {
+      'name': _nameController.text.isNotEmpty ? _nameController.text : 'Updated Doctor',
+      'specialty': _specialtyController.text.isNotEmpty ? _specialtyController.text : 'Specialist',
+    };
+
+    final success = await _doctorService.updateDoctor(widget.doctor!['_id'], doctorData);
+    setState(() => _isSaving = false);
+
+    if (success && mounted) {
+      _showSuccessDialog(context);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update doctor')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +147,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                           borderRadius: BorderRadius.circular(16),
                           image: DecorationImage(
                             image: AssetImage(
-                                'images/avatars-doctor/avatar-${(widget.index ?? 0) + 1}.jpg'),
+                                'assets/images/avatars-doctor/avatar-${(widget.index ?? 0) + 1}.jpg'),
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -133,15 +186,13 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                   const SizedBox(height: 24),
 
                   // --- FORM FIELDS ---
-                  _buildTextField(hintText: 'Dr. Dianne Russell'),
+                  _buildTextField(hintText: 'Dr. Dianne Russell', controller: _nameController),
                   const SizedBox(height: 16),
-                  _buildTextField(
-                      hintText: '6391 Elgin St. Celina, Delaware 10299'),
+                  _buildTextField(hintText: 'Specialty', controller: _specialtyController),
                   const SizedBox(height: 16),
                   _buildPhoneField(hintPhone: '(704) 555-0127'),
                   const SizedBox(height: 16),
-                  _buildTextField(
-                      hintText: '6391 Elgin St. Celina, Delaware 10299'),
+                  _buildTextField(hintText: '6391 Elgin St. Celina, Delaware 10299', controller: _addressController),
                   const SizedBox(height: 16),
                   _buildDropdownField('United States',
                       true), // Assuming flag is part of it or just text
@@ -164,9 +215,9 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                         _selectedState ?? 'Alaska', false),
                   ),
                   const SizedBox(height: 16),
-                  _buildTextField(hintText: 'Fairbanks'),
+                  _buildTextField(hintText: 'Fairbanks', controller: _cityController),
                   const SizedBox(height: 16),
-                  _buildTextField(hintText: '99703'),
+                  _buildTextField(hintText: '99703', controller: _zipController),
                   const SizedBox(height: 24),
                   _buildGenderSelection(),
 
@@ -206,7 +257,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _showSuccessDialog(context),
+                    onTap: _updateDoctor,
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
@@ -214,14 +265,19 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       alignment: Alignment.center,
-                      child: const Text(
-                        'Update',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 24, height: 24,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
+                          : const Text(
+                              'Update',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -253,8 +309,9 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
     );
   }
 
-  Widget _buildTextField({required String hintText}) {
+  Widget _buildTextField({required String hintText, TextEditingController? controller}) {
     return TextFormField(
+      controller: controller,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
@@ -318,7 +375,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                       borderRadius: BorderRadius.circular(2),
                       image: DecorationImage(
                         image: AssetImage(
-                            'images/flags/Nation=${_getFlagAssetName(_selectedPhoneCountry)}.png'),
+                            'assets/images/flags/Nation=${_getFlagAssetName(_selectedPhoneCountry)}.png'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -441,7 +498,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                     borderRadius: BorderRadius.circular(2),
                     image: DecorationImage(
                       image: AssetImage(
-                          'images/flags/Nation=${_getFlagAssetName(value)}.png'),
+                          'assets/images/flags/Nation=${_getFlagAssetName(value)}.png'),
                       fit: BoxFit.cover,
                     ),
                   ),

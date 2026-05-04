@@ -283,7 +283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         image: DecorationImage(
-          image: AssetImage('images/flags/Nation=$assetName.png'),
+          image: AssetImage('assets/images/flags/Nation=$assetName.png'),
           fit: BoxFit.cover,
         ),
       ),
