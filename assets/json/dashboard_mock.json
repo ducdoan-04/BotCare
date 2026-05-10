@@ -1,0 +1,221 @@
+{
+  "success": true,
+  "data": {
+    "summary": {
+      "total_doctors": 185,
+      "total_appointments": 342,
+      "under_treatment_count": 115,
+      "recovered_count": 92
+    },
+    "patient_chart_today": [
+      {
+        "label": "08:00",
+        "under_treatment": 30,
+        "recovered": 15
+      },
+      {
+        "label": "11:00",
+        "under_treatment": 65,
+        "recovered": 42
+      },
+      {
+        "label": "14:00",
+        "under_treatment": 110,
+        "recovered": 78
+      },
+      {
+        "label": "17:00",
+        "under_treatment": 85,
+        "recovered": 92
+      }
+    ],
+    "patient_chart_week": [
+      {
+        "label": "Mon",
+        "under_treatment": 95,
+        "recovered": 62
+      },
+      {
+        "label": "Tue",
+        "under_treatment": 112,
+        "recovered": 74
+      },
+      {
+        "label": "Wed",
+        "under_treatment": 145,
+        "recovered": 98
+      },
+      {
+        "label": "Thu",
+        "under_treatment": 128,
+        "recovered": 110
+      },
+      {
+        "label": "Fri",
+        "under_treatment": 150,
+        "recovered": 125
+      }
+    ],
+    "patient_chart_month": [
+      {
+        "label": "Week 1",
+        "under_treatment": 420,
+        "recovered": 310
+      },
+      {
+        "label": "Week 2",
+        "under_treatment": 510,
+        "recovered": 430
+      },
+      {
+        "label": "Week 3",
+        "under_treatment": 480,
+        "recovered": 490
+      },
+      {
+        "label": "Week 4",
+        "under_treatment": 550,
+        "recovered": 520
+      }
+    ],
+    "upcoming_appointments": [
+      {
+        "id": "app_v1",
+        "patient_name": "William Parker",
+        "reason": "Severe Migraine",
+        "avatar": "images/doctors/johan_henry.jpg",
+        "time": "Today: 08:30 AM",
+        "doctor_name": "DR. Arthur Pendragon",
+        "specialty": "General"
+      },
+      {
+        "id": "app_v2",
+        "patient_name": "Emily Johnson",
+        "reason": "Fever & Cold Checkup",
+        "avatar": "images/doctors/theresa_webb.jpg",
+        "time": "Today: 09:15 AM",
+        "doctor_name": "DR. Daniel Radcliffe",
+        "specialty": "Pediatrics"
+      },
+      {
+        "id": "app_v3",
+        "patient_name": "Michael Brown",
+        "reason": "Skin Rash Consultation",
+        "avatar": "images/doctors/brooklyn_simmons.jpg",
+        "time": "Today: 11:00 AM",
+        "doctor_name": "DR. Cassandra Sterling",
+        "specialty": "Dermatology"
+      },
+      {
+        "id": "app_v4",
+        "patient_name": "Sophia Martinez",
+        "reason": "Cardiology Screening",
+        "avatar": "images/doctors/david_cooper.jpg",
+        "time": "Today: 02:45 PM",
+        "doctor_name": "DR. Beatrice Vance",
+        "specialty": "Cardiology"
+      }
+    ],
+    "doctors_schedule": [
+      {
+        "id": "d_v1",
+        "name": "DR. Arthur Pendragon",
+        "specialty": "General Physician",
+        "status": "available",
+        "next_available": null,
+        "avatar": "images/doctors/johan_henry.jpg"
+      },
+      {
+        "id": "d_v2",
+        "name": "DR. Beatrice Vance",
+        "specialty": "Cardiologist Expert",
+        "status": "available",
+        "next_available": null,
+        "avatar": "images/doctors/david_cooper.jpg"
+      },
+      {
+        "id": "d_v3",
+        "name": "DR. Cassandra Sterling",
+        "specialty": "Senior Dermatologist",
+        "status": "available",
+        "next_available": "3:15 PM",
+        "avatar": "images/doctors/brooklyn_simmons.jpg"
+      },
+      {
+        "id": "d_v4",
+        "name": "DR. Daniel Radcliffe",
+        "specialty": "Chief Pediatrician",
+        "status": "available",
+        "next_available": "4:00 PM",
+        "avatar": "images/doctors/theresa_webb.jpg"
+      }
+    ],
+    "polyclinics": [
+      {
+        "id": "general",
+        "name": "General Checkup",
+        "patient_count": 120
+      },
+      {
+        "id": "pediatrics",
+        "name": "Pediatric Ward",
+        "patient_count": 95
+      },
+      {
+        "id": "cardiology",
+        "name": "Cardiology Unit",
+        "patient_count": 68
+      },
+      {
+        "id": "dermatology",
+        "name": "Dermatology Clinic",
+        "patient_count": 54
+      }
+    ],
+    "notifications": {
+      "unread_count": 4,
+      "list": [
+        {
+          "id": "n_v1",
+          "title": "New Message from Dr. Beatrice",
+          "message": "Please review the diagnostic files for patient Sophia.",
+          "type": "message",
+          "is_read": false,
+          "time_ago": "2 minutes ago"
+        },
+        {
+          "id": "n_v2",
+          "title": "Weekly Medical Report Ready",
+          "message": "Your department analytics sheet is compiled.",
+          "type": "document",
+          "is_read": true,
+          "time_ago": "1 hour ago"
+        },
+        {
+          "id": "n_v3",
+          "title": "Patient Check-in Alert",
+          "message": "William Parker has checked in for consultation.",
+          "type": "alert",
+          "is_read": false,
+          "time_ago": "3 hours ago"
+        },
+        {
+          "id": "n_v4",
+          "title": "Prescription approved by Admin",
+          "message": "The custom drug order has been authorized.",
+          "type": "alert",
+          "is_read": true,
+          "time_ago": "5 hours ago"
+        },
+        {
+          "id": "n_v5",
+          "title": "System update scheduled",
+          "message": "CareBot database maintenance at midnight.",
+          "type": "message",
+          "is_read": false,
+          "time_ago": "12 hours ago"
+        }
+      ]
+    }
+  }
+}

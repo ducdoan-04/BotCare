@@ -12,18 +12,22 @@ class NotificationScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
+        leadingWidth: 72,
         leading: Padding(
           padding: const EdgeInsets.only(left: 24.0),
-          child: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.border),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.border, width: 1),
+                ),
+                child: const Icon(Icons.arrow_back, color: AppColors.textPrimary, size: 20),
               ),
-              child: const Icon(Icons.arrow_back, color: AppColors.textPrimary, size: 20),
             ),
           ),
         ),
@@ -51,15 +55,98 @@ class NotificationScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      _buildNotificationItem(context, 'Message from Lucy', '32 minutes ago', Icons.email, true),
+                      _buildNotificationItem(
+                        context: context,
+                        title: 'Message from Lucy',
+                        time: '32 minutes ago',
+                        icon: Icons.email,
+                        unread: true,
+                        detailWidgetBuilder: () => const NotificationDetailScreen(
+                          title: 'Message from Lucy',
+                          time: '32 minutes ago',
+                          appBarTitle: 'Message',
+                          greeting: 'Dear Nola,',
+                          bodyText: 'Can you please forward the patient reports of Jacob Jones from yesterday\'s General checkup? Dr. Arthur wants to review them before his next appointment.',
+                          closingText: 'Thank you,\nLucy (Assistant)',
+                        ),
+                      ),
                       _buildDivider(),
-                      _buildNotificationItem(context, 'New patients added', '1 hours ago', Icons.person_add, false),
+                      _buildNotificationItem(
+                        context: context,
+                        title: 'New patients added',
+                        time: '1 hours ago',
+                        icon: Icons.person_add,
+                        unread: false,
+                        detailWidgetBuilder: () => const NotificationDetailScreen(
+                          title: 'New patients added',
+                          time: '1 hours ago',
+                          appBarTitle: 'System Alert',
+                          bodyText: 'A batch of new patients has been registered through the online booking system and assigned to your reception desk queue. Please verify their insurance details.',
+                          details: {
+                            'Patient Count': '5 New registrations',
+                            'Assigned Desk': 'Reception Desk 1',
+                          },
+                          footerText: 'Check the Patient Directory page to complete verification steps.',
+                        ),
+                      ),
                       _buildDivider(),
-                      _buildNotificationItem(context, 'Your leave is approved', '2 hours ago', Icons.check_box, true),
+                      _buildNotificationItem(
+                        context: context,
+                        title: 'Your leave is approved',
+                        time: '2 hours ago',
+                        icon: Icons.check_box,
+                        unread: true,
+                        detailWidgetBuilder: () => const NotificationDetailScreen(
+                          title: 'Your leave is approved',
+                          time: '2 hours ago',
+                          appBarTitle: 'Leave',
+                          greeting: 'Hi Nola,',
+                          bodyText: 'Your leave request for personal time off has been approved by the management team.',
+                          details: {
+                            'Type': 'Personal Leave',
+                            'Date Range': 'June 21 - June 23, 2025',
+                            'Total Days': '3 Working Days',
+                          },
+                          footerText: 'Please ensure that any tasks or responsibilities are delegated before your time off. If there\'s anything urgent, the admin team will contact your replacement.',
+                          closingText: 'Enjoy your well-deserved break! 🌿',
+                        ),
+                      ),
                       _buildDivider(),
-                      _buildNotificationItem(context, 'Jacob recob file.pdf', '4 hours ago', Icons.insert_drive_file, false),
+                      _buildNotificationItem(
+                        context: context,
+                        title: 'Jacob recob file.pdf',
+                        time: '4 hours ago',
+                        icon: Icons.insert_drive_file,
+                        unread: false,
+                        detailWidgetBuilder: () => const NotificationDetailScreen(
+                          title: 'Jacob recob file.pdf',
+                          time: '4 hours ago',
+                          appBarTitle: 'File Shared',
+                          bodyText: 'Jacob Jones has uploaded a medical document file "patient_recob_file.pdf". You can now access and view it in the document section.',
+                          details: {
+                            'File Name': 'patient_recob_file.pdf',
+                            'Size': '1.2 MB',
+                            'Format': 'PDF Document',
+                            'Uploader': 'Jacob Jones',
+                          },
+                        ),
+                      ),
                       _buildDivider(),
-                      _buildNotificationItem(context, 'Message from Jacob', '32 minutes ago', Icons.email, true),
+                      _buildNotificationItem(
+                        context: context,
+                        title: 'Message from Jacob',
+                        time: '1 day ago',
+                        icon: Icons.email,
+                        unread: false,
+                        detailWidgetBuilder: () => const NotificationDetailScreen(
+                          title: 'Message from Jacob',
+                          time: '1 day ago',
+                          appBarTitle: 'Message',
+                          greeting: 'Hello Admin,',
+                          bodyText: 'I would like to reschedule my appointment from 09:40 AM to 11:00 AM if possible. Please let me know if Dr. Arthur is available at that time.',
+                          closingText: 'Regards,\nJacob Jones',
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -72,7 +159,7 @@ class NotificationScreen extends StatelessWidget {
                 child: const Text(
                   'Mark all as read',
                   style: TextStyle(
-                    color: Color(0xFF007A8A), // AppColors.primary equivalent matching image
+                    color: Color(0xFF007A8A), // Teal
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
                   ),
@@ -89,10 +176,20 @@ class NotificationScreen extends StatelessWidget {
     return const Divider(height: 1, color: AppColors.border, indent: 84, endIndent: 20); // Indent to clear icon
   }
 
-  Widget _buildNotificationItem(BuildContext context, String title, String time, IconData icon, bool unread) {
+  Widget _buildNotificationItem({
+    required BuildContext context,
+    required String title,
+    required String time,
+    required IconData icon,
+    required bool unread,
+    required Widget Function() detailWidgetBuilder,
+  }) {
     return InkWell(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationDetailScreen(title: title, time: time)));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => detailWidgetBuilder()),
+        );
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),

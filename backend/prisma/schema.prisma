@@ -16,3 +16,58 @@ model User {
 
   @@map("users")
 }
+
+model Doctor {
+  id             String        @id @default(uuid())
+  name           String
+  status         String        // "available", "away"
+  next_available String?       // e.g. "2:30 PM"
+  avatar         String?
+  polyclinic_id  String?
+  polyclinic     Polyclinic?   @relation(fields: [polyclinic_id], references: [id])
+  appointments   Appointment[]
+
+  @@map("doctors")
+}
+
+model Patient {
+  id            String        @id @default(uuid())
+  name          String
+  status        String        // "under_treatment", "recovered"
+  registered_at DateTime      @default(now())
+  appointments  Appointment[]
+
+  @@map("patients")
+}
+
+model Appointment {
+  id         String   @id @default(uuid())
+  patient_id String
+  doctor_id  String
+  reason     String
+  time       DateTime
+  status     String   // "pending", "completed"
+  patient    Patient  @relation(fields: [patient_id], references: [id])
+  doctor     Doctor   @relation(fields: [doctor_id], references: [id])
+
+  @@map("appointments")
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  title      String
+  message    String
+  type       String   // "message", "alert", "document"
+  created_at DateTime @default(now())
+  is_read    Boolean  @default(false)
+
+  @@map("notifications")
+}
+
+model Polyclinic {
+  id      String   @id // e.g. "general", "pediatrics", "cardiology", "dermatology"
+  name    String
+  doctors Doctor[]
+
+  @@map("polyclinics")
+}
