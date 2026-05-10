@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import 'main_navigation.dart';
+import '../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,18 +12,39 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscureText = true;
   bool _rememberMe = false;
-  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AuthProvider>().resetState();
+    });
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   void _handleLogin() async {
-    setState(() => _isLoading = true);
+    if (!_formKey.currentState!.validate()) return;
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    final authProvider = context.read<AuthProvider>();
 
-    if (mounted) {
-      setState(() => _isLoading = false);
+    await authProvider.login(
+      _emailController.text.trim(),
+      _passwordController.text,
+      _rememberMe,
+    );
+
+    if (mounted && authProvider.state == AuthState.success) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainNavigation()),
       );
@@ -32,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -129,11 +153,66 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Form Fields
-                        _buildTextField(hintText: 'Enter email address'),
-                        const SizedBox(height: 16),
+                        // Error Banner
+                        if (authProvider.state == AuthState.error && authProvider.errorMessage != null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFEBEE),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    authProvider.errorMessage!,
+                                    style: const TextStyle(color: Colors.red, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
-                        _buildPasswordField(hintText: 'Enter password'),
+                        // Form Fields
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTextField(
+                                hintText: 'Enter email address',
+                                controller: _emailController,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter your email';
+                                  }
+                                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                                    return 'Please enter a valid email address';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              _buildPasswordField(
+                                hintText: 'Enter password',
+                                controller: _passwordController,
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter your password';
+                                  }
+                                  if (value.length < 6) {
+                                    return 'Password must be at least 6 characters';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 20),
 
                         // Remember Me & Forgot Password bounds
@@ -194,22 +273,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         // Login Button
                         ElevatedButton(
-                          onPressed: _isLoading ? null : _handleLogin,
+                          onPressed: authProvider.state == AuthState.loading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             minimumSize: const Size(double.infinity, 56),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(60), // Pill shape
+                              borderRadius: BorderRadius.circular(60), // Pill shape
                             ),
                             elevation: 0,
                           ),
-                          child: _isLoading
+                          child: authProvider.state == AuthState.loading
                               ? const SizedBox(
                                   height: 24,
                                   width: 24,
-                                  child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2))
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                               : const Text(
                                   'Login',
                                   style: TextStyle(
@@ -235,8 +312,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildTextField({required String hintText}) {
+  Widget _buildTextField({
+    required String hintText,
+    required TextEditingController controller,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
+      controller: controller,
+      validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
@@ -260,12 +344,31 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
+        ),
+        errorStyle: const TextStyle(
+          color: Color(0xFFE53935),
+          fontSize: 12,
+        ),
       ),
     );
   }
 
-  Widget _buildPasswordField({required String hintText}) {
+  Widget _buildPasswordField({
+    required String hintText,
+    required TextEditingController controller,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
+      controller: controller,
+      validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       obscureText: _obscureText,
       decoration: InputDecoration(
         hintText: hintText,
@@ -289,6 +392,18 @@ class _LoginScreenState extends State<LoginScreen> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
+        ),
+        errorStyle: const TextStyle(
+          color: Color(0xFFE53935),
+          fontSize: 12,
         ),
         suffixIcon: IconButton(
           icon: Icon(
