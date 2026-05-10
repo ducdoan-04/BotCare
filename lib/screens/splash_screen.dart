@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import 'welcome_screen.dart';
+import 'main_navigation.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,11 +17,29 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Simulate loading time (e.g. fetching config or auth state)
-    Timer(const Duration(seconds: 2), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      );
+    _navigateToNext();
+  }
+
+  void _navigateToNext() {
+    Timer(const Duration(seconds: 2), () async {
+      if (!mounted) return;
+      
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Ensure the checkLoginStatus has completed
+      await authProvider.checkLoginStatus();
+      
+      if (mounted) {
+        if (authProvider.state == AuthState.success) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const MainNavigation()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          );
+        }
+      }
     });
   }
 

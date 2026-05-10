@@ -1,0 +1,177 @@
+{
+  "success": true,
+  "data": {
+    "summary": {
+      "total_doctors": 120,
+      "total_appointments": 260,
+      "under_treatment_count": 86,
+      "recovered_count": 54
+    },
+    "patient_chart": [
+      {
+        "label": "Wed",
+        "under_treatment": 75,
+        "recovered": 52
+      },
+      {
+        "label": "Thu",
+        "under_treatment": 72,
+        "recovered": 48
+      },
+      {
+        "label": "Fri",
+        "under_treatment": 85,
+        "recovered": 58
+      },
+      {
+        "label": "Sat",
+        "under_treatment": 78,
+        "recovered": 54
+      },
+      {
+        "label": "Sun",
+        "under_treatment": 70,
+        "recovered": 61
+      }
+    ],
+    "upcoming_appointments": [
+      {
+        "id": "app_01",
+        "patient_name": "Jacob Jones",
+        "reason": "Headache Disease",
+        "avatar": "images/doctors/johan_henry.jpg",
+        "time": "Today: 09:40 AM",
+        "doctor_name": "DR. Johan Henry",
+        "specialty": "General"
+      },
+      {
+        "id": "app_02",
+        "patient_name": "Jenny Wilson",
+        "reason": "Abdominal Pain",
+        "avatar": "images/doctors/theresa_webb.jpg",
+        "time": "Today: 10:40 AM",
+        "doctor_name": "DR. Theresa Webb",
+        "specialty": "Pediatrics"
+      },
+      {
+        "id": "app_03",
+        "patient_name": "Jacob Jones",
+        "reason": "Swelling",
+        "avatar": "images/doctors/brooklyn_simmons.jpg",
+        "time": "Today: 11:20 AM",
+        "doctor_name": "DR. Brooklyn Simmons",
+        "specialty": "Dermatology"
+      },
+      {
+        "id": "app_04",
+        "patient_name": "Jacob Jones",
+        "reason": "Cardiology",
+        "avatar": "images/doctors/david_cooper.jpg",
+        "time": "Today: 12:10 AM",
+        "doctor_name": "DR. David Cooper",
+        "specialty": "Cardiology"
+      }
+    ],
+    "doctors_schedule": [
+      {
+        "id": "d_01",
+        "name": "DR. Johan Henry",
+        "specialty": "General Practitioner",
+        "status": "available",
+        "next_available": null,
+        "avatar": "images/doctors/johan_henry.jpg"
+      },
+      {
+        "id": "d_02",
+        "name": "DR. David Cooper",
+        "specialty": "Cardiology",
+        "status": "available",
+        "next_available": null,
+        "avatar": "images/doctors/david_cooper.jpg"
+      },
+      {
+        "id": "d_03",
+        "name": "DR. Brooklyn Simmons",
+        "specialty": "Dermatology",
+        "status": "available",
+        "next_available": "2:30 PM",
+        "avatar": "images/doctors/brooklyn_simmons.jpg"
+      },
+      {
+        "id": "d_04",
+        "name": "DR. Theresa Webb",
+        "specialty": "Pediatrics",
+        "status": "available",
+        "next_available": "2:35 PM",
+        "avatar": "images/doctors/theresa_webb.jpg"
+      }
+    ],
+    "polyclinics": [
+      {
+        "id": "general",
+        "name": "General",
+        "patient_count": 80
+      },
+      {
+        "id": "pediatrics",
+        "name": "Pediatrics",
+        "patient_count": 50
+      },
+      {
+        "id": "cardiology",
+        "name": "Cardiology",
+        "patient_count": 40
+      },
+      {
+        "id": "dermatology",
+        "name": "Dermatology",
+        "patient_count": 30
+      }
+    ],
+    "notifications": {
+      "unread_count": 3,
+      "list": [
+        {
+          "id": "n_01",
+          "title": "Message from Lucy",
+          "message": "Lucy sent you a secure message.",
+          "type": "message",
+          "is_read": false,
+          "time_ago": "32 minutes ago"
+        },
+        {
+          "id": "n_02",
+          "title": "New patients added",
+          "message": "3 new patients registered in general ward.",
+          "type": "alert",
+          "is_read": true,
+          "time_ago": "1 hours ago"
+        },
+        {
+          "id": "n_03",
+          "title": "Your leave is approved",
+          "message": "HR approved your personal leave request.",
+          "type": "alert",
+          "is_read": false,
+          "time_ago": "2 hours ago"
+        },
+        {
+          "id": "n_04",
+          "title": "Jacob recob file.pdf",
+          "message": "New diagnostic files shared.",
+          "type": "document",
+          "is_read": true,
+          "time_ago": "4 hours ago"
+        },
+        {
+          "id": "n_05",
+          "title": "Message from Jacob",
+          "message": "Jacob responded to your prescription query.",
+          "type": "message",
+          "is_read": false,
+          "time_ago": "32 minutes ago"
+        }
+      ]
+    }
+  }
+}

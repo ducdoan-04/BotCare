@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_colors.dart';
 import 'main_navigation.dart';
 import '../providers/auth_provider.dart';
+import '../services/storage_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,8 +22,24 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<AuthProvider>().resetState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        context.read<AuthProvider>().resetState();
+        
+        // Load saved "Remember me" email credentials
+        final savedEmail = await StorageService.read('saved_email');
+        final rememberMeStr = await StorageService.read('remember_me');
+        final isRemembered = rememberMeStr == 'true';
+        
+        if (mounted) {
+          setState(() {
+            _rememberMe = isRemembered;
+            if (isRemembered && savedEmail != null) {
+              _emailController.text = savedEmail;
+            }
+          });
+        }
+      }
     });
   }
 
