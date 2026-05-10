@@ -18,39 +18,60 @@ model User {
 }
 
 model Doctor {
-  id             String        @id @default(uuid())
-  name           String
-  status         String        // "available", "away"
-  next_available String?       // e.g. "2:30 PM"
-  avatar         String?
-  polyclinic_id  String?
-  polyclinic     Polyclinic?   @relation(fields: [polyclinic_id], references: [id])
-  appointments   Appointment[]
+  id                         String             @id @default(uuid())
+  full_name                  String
+  profile_image_url          String?
+  gender                     String?
+  email                      String?
+  phone_number               String?
+  address                    String?
+  specialization             String?            // "General Practitioner", "Cardiology", "Dermatology", etc.
+  experience                 String?            // e.g. "10+ Years"
+  education                  String?
+  license_number             String?
+  status                     String             @default("Available") // "Available", "Away", etc.
+  working_hours              String?            @default("9AM - 2PM")
+  rating                     Float              @default(0.0)
+  total_reviews              Int                @default(0)
+  total_patients             Int                @default(0)
+  surgeries                  Int                @default(0)
+  patients_increase_percent  Float              @default(0.0)
+  appointments               Appointment[]
+  availability_slots         AvailabilitySlot[]
 
   @@map("doctors")
 }
 
 model Patient {
-  id            String        @id @default(uuid())
+  id            String   @id @default(uuid())
   name          String
-  status        String        // "under_treatment", "recovered"
-  registered_at DateTime      @default(now())
-  appointments  Appointment[]
+  status        String   // "under_treatment", "recovered"
+  registered_at DateTime @default(now())
 
   @@map("patients")
 }
 
 model Appointment {
-  id         String   @id @default(uuid())
-  patient_id String
-  doctor_id  String
-  reason     String
-  time       DateTime
-  status     String   // "pending", "completed"
-  patient    Patient  @relation(fields: [patient_id], references: [id])
-  doctor     Doctor   @relation(fields: [doctor_id], references: [id])
+  id                String   @id @default(uuid())
+  doctor_id         String
+  patient_name      String
+  consultation_type String   // "Routine check up", etc.
+  appointment_time  String   // "09:40 AM"
+  category          String   // "Check-up", "Urgent visit"
+  status            String   // "Confirm", "Canceled", "Pending"
+  doctor            Doctor   @relation(fields: [doctor_id], references: [id], onDelete: Cascade)
 
   @@map("appointments")
+}
+
+model AvailabilitySlot {
+  id        String  @id @default(uuid())
+  doctor_id String
+  time_slot String  // "09:00 AM", etc.
+  is_booked Boolean @default(false)
+  doctor    Doctor  @relation(fields: [doctor_id], references: [id], onDelete: Cascade)
+
+  @@map("availability_slots")
 }
 
 model Notification {
@@ -65,9 +86,8 @@ model Notification {
 }
 
 model Polyclinic {
-  id      String   @id // e.g. "general", "pediatrics", "cardiology", "dermatology"
-  name    String
-  doctors Doctor[]
+  id   String @id // e.g. "general", "pediatrics", "cardiology", "dermatology"
+  name String
 
   @@map("polyclinics")
 }

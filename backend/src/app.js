@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./routes/auth.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const doctorRoutes = require('./routes/doctor.routes');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/v1', dashboardRoutes);
+app.use('/api/v1/doctors', doctorRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
