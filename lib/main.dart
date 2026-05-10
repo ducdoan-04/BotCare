@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'providers/auth_provider.dart';
 
 void main() {
-  runApp(const CareBotApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: const CareBotApp(),
+    ),
+  );
 }
 
 class CareBotApp extends StatelessWidget {
