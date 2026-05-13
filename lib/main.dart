@@ -4,6 +4,7 @@ import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/add_doctor_provider.dart';
+import 'providers/add_patient_provider.dart';
 
 void main() {
   runApp(
@@ -11,6 +12,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AddDoctorProvider()),
+        ChangeNotifierProvider(create: (_) => AddPatientProvider()),
       ],
       child: const CareBotApp(),
     ),

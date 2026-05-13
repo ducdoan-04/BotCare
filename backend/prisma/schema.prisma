@@ -43,15 +43,30 @@ model Doctor {
   user                       User?              @relation("UserDoctor", fields: [user_id], references: [id], onDelete: SetNull)
   appointments               Appointment[]
   availability_slots         AvailabilitySlot[]
+  patients                   Patient[]
 
   @@map("doctors")
 }
 
 model Patient {
-  id            String   @id @default(uuid())
-  name          String
-  status        String   // "under_treatment", "recovered"
-  registered_at DateTime @default(now())
+  id                    String   @id @default(uuid())
+  full_name             String
+  avatar_url            String?
+  email                 String?
+  phone                 String?
+  address               String?
+  country               String?
+  state                 String?
+  city                  String?
+  blood_type            String?  // Enum: A, B, AB, O, etc.
+  allergies             String?
+  status                String   @default("Under Treatment") // "Under Treatment", "Recovered"
+  assigned_doctor_id    String?
+  specialist_department String?  // e.g. "Cardiology"
+  registered_at         DateTime @default(now())
+
+  assigned_doctor       Doctor?       @relation(fields: [assigned_doctor_id], references: [id], onDelete: SetNull)
+  appointments          Appointment[]
 
   @@map("patients")
 }
@@ -59,12 +74,17 @@ model Patient {
 model Appointment {
   id                String   @id @default(uuid())
   doctor_id         String
-  patient_name      String
+  patient_id        String?
+  patient_name      String   // Fallback name if patient_id is null
   consultation_type String   // "Routine check up", etc.
   appointment_time  String   // "09:40 AM"
+  appointment_date  DateTime @default(now())
   category          String   // "Check-up", "Urgent visit"
   status            String   // "Confirm", "Canceled", "Pending"
+  created_at        DateTime @default(now())
+  
   doctor            Doctor   @relation(fields: [doctor_id], references: [id], onDelete: Cascade)
+  patient           Patient? @relation(fields: [patient_id], references: [id], onDelete: SetNull)
 
   @@map("appointments")
 }

@@ -11,67 +11,60 @@ class DashboardService {
       // 2. Upcoming Appointments (4-5)
       const upcomingAppointmentsRaw = await prisma.appointment.findMany({
         take: 5,
-        orderBy: { time: 'asc' },
+        orderBy: { appointment_date: 'asc' },
         include: {
           patient: true,
-          doctor: {
-            include: { polyclinic: true }
-          }
+          doctor: true
         }
       });
 
       const upcomingAppointments = upcomingAppointmentsRaw.map(app => ({
         id: app.id,
-        patient_name: app.patient.name,
-        reason: app.reason,
-        avatar: app.doctor.avatar || 'images/doctors/default.jpg',
-        time: this.formatTime(app.time),
-        doctor_name: app.doctor.name,
-        specialty: app.doctor.polyclinic?.name || 'General'
+        patient_name: app.patient?.full_name || app.patient_name,
+        reason: app.consultation_type,
+        avatar: app.doctor.profile_image_url || 'images/doctors/default.jpg',
+        time: this.formatTime(app.appointment_date),
+        doctor_name: app.doctor.full_name,
+        specialty: app.doctor.specialization || 'General'
       }));
 
       // 3. Doctor's Schedule (4 doctors)
       const doctorsRaw = await prisma.doctor.findMany({
-        take: 4,
-        include: { polyclinic: true }
+        take: 4
       });
 
       const doctorsSchedule = doctorsRaw.map(doc => ({
         id: doc.id,
-        name: doc.name,
-        specialty: doc.polyclinic?.name || 'General Practitioner',
+        name: doc.full_name,
+        specialty: doc.specialization || 'General Practitioner',
         status: doc.status, // "available" or "away"
-        next_available: doc.next_available, // e.g. "2:30 PM"
-        avatar: doc.avatar || 'images/doctors/default.jpg'
+        next_available: doc.working_hours, // e.g. "2:30 PM"
+        avatar: doc.profile_image_url || 'images/doctors/default.jpg'
       }));
 
       // 4. Polyclinics Data (Bar Chart: General, Pediatrics, Cardiology, Dermatology)
-      const polyclinicsRaw = await prisma.polyclinic.findMany({
+      // Group by specialization since the polyclinic relation was removed
+      const specializationStats = await prisma.doctor.findMany({
         include: {
-          doctors: {
-            include: {
-              _count: {
-                select: { appointments: true }
-              }
-            }
+          _count: {
+            select: { appointments: true }
           }
         }
       });
 
-      const polyclinicsData = polyclinicsRaw.map(poly => {
-        // Sum appointments across all doctors in this polyclinic
-        const patientCount = poly.doctors.reduce((sum, doc) => sum + doc._count.appointments, 0);
-        return {
-          id: poly.id,
-          name: poly.name,
-          patient_count: patientCount || 0
-        };
+      const statsMap = {};
+      specializationStats.forEach(doc => {
+        const spec = (doc.specialization || 'General').toLowerCase();
+        statsMap[spec] = (statsMap[spec] || 0) + doc._count.appointments;
       });
 
-      // Ensure standard order and fallbacks if empty
+      // Map to the format expected by UI
       const orderedPolyclinics = ['general', 'pediatrics', 'cardiology', 'dermatology'].map(id => {
-        const found = polyclinicsData.find(p => p.id === id);
-        return found || { id, name: id.charAt(0).toUpperCase() + id.slice(1), patient_count: 0 };
+        return {
+          id,
+          name: id.charAt(0).toUpperCase() + id.slice(1),
+          patient_count: statsMap[id] || 0
+        };
       });
 
       // 5. Notifications
@@ -98,10 +91,10 @@ class DashboardService {
 
       // 7. Overall Patient counts for current view
       const underTreatmentCount = await prisma.patient.count({
-        where: { status: 'under_treatment' }
+        where: { status: 'Under Treatment' }
       });
       const recoveredCount = await prisma.patient.count({
-        where: { status: 'recovered' }
+        where: { status: 'Recovered' }
       });
 
       return {
@@ -163,14 +156,14 @@ class DashboardService {
 
         const under_treatment = await prisma.patient.count({
           where: {
-            status: 'under_treatment',
+            status: 'Under Treatment',
             registered_at: { gte: startOfDay, lte: endOfDay }
           }
         });
 
         const recovered = await prisma.patient.count({
           where: {
-            status: 'recovered',
+            status: 'Recovered',
             registered_at: { gte: startOfDay, lte: endOfDay }
           }
         });

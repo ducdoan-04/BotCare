@@ -17,7 +17,7 @@ class DashboardRepository {
   }
 
   // Set to true to test the frontend UI with fake data from assets/json/dashboard_mock.json!
-  static const bool useMockData = true;
+  static const bool useMockData = false;
 
   Future<DashboardData> fetchDashboardData({String period = 'week'}) async {
     if (useMockData) {

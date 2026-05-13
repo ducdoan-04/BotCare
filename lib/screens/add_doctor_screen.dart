@@ -12,6 +12,7 @@ import '../repositories/doctor_repository.dart';
 import '../providers/add_doctor_provider.dart';
 import 'select_country_screen.dart';
 import 'select_state_screen.dart';
+import '../widgets/shared_basic_info_form.dart';
 
 
 class AddDoctorScreen extends StatefulWidget {
@@ -352,161 +353,25 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                     children: [
                       if (_currentStep == 0) ...[
                         // =================== STEP 1: BASIC INFO ===================
-                        const SizedBox(height: 8),
-
-                        // --- AVATAR UPLOAD ---
-                        Row(
-                          children: [
-                            // Avatar Image Circle
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE6F2F3),
-                                borderRadius: BorderRadius.circular(16),
-                                image: provider.state.avatarBytes != null
-                                    ? DecorationImage(
-                                        image: MemoryImage(provider.state.avatarBytes!),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                              ),
-                              alignment: Alignment.center,
-                              child: provider.state.avatarBytes == null
-                                  ? const Text(
-                                      'D',
-                                      style: TextStyle(
-                                        fontSize: 40,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF008394),
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'JPG or PNG, < 5 MB.',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                ),
-                                const SizedBox(height: 8),
-                                InkWell(
-                                  onTap: () => _pickAvatar(provider),
-                                  borderRadius: BorderRadius.circular(24),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(24),
-                                      border: Border.all(color: const Color(0xFF008394)),
-                                    ),
-                                    child: const Text(
-                                      'Upload New Picture',
-                                      style: TextStyle(
-                                        color: Color(0xFF008394),
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                        SharedBasicInfoForm(
+                          fullNameController: _fullNameController,
+                          emailController: _emailController,
+                          phoneController: _phoneController,
+                          addressController: _addressController,
+                          cityController: _cityController,
+                          avatarBytes: provider.state.avatarBytes,
+                          avatarPath: provider.state.avatarPath,
+                          country: provider.state.country,
+                          stateName: provider.state.state,
+                          onPickAvatar: () => _pickAvatar(provider),
+                          onFullNameChanged: provider.setFullName,
+                          onEmailChanged: provider.setEmail,
+                          onPhoneChanged: provider.setPhoneNumber,
+                          onAddressChanged: provider.setAddress,
+                          onCityChanged: provider.setCity,
+                          onCountryChanged: provider.setCountry,
+                          onStateChanged: provider.setStateName,
                         ),
-                        const SizedBox(height: 24),
-
-                        // --- TEXT FIELDS ---
-                        _buildTextField(
-                          hintText: 'Enter full name',
-                          controller: _fullNameController,
-                          onChanged: provider.setFullName,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          hintText: 'Enter email address',
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          onChanged: provider.setEmail,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildPhoneField(
-                          hintPhone: 'Input phone number',
-                          controller: _phoneController,
-                          provider: provider,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildTextField(
-                          hintText: 'Enter address',
-                          controller: _addressController,
-                          onChanged: provider.setAddress,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // --- SELECT COUNTRY BOTTOM SHEET ---
-                        GestureDetector(
-                          onTap: () async {
-                            final result = await showModalBottomSheet<String>(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => SelectCountryScreen(
-                                initialSelection: provider.state.country ?? 'United States',
-                              ),
-                            );
-                            if (result != null) {
-                              provider.setCountry(result);
-                            }
-                          },
-                          child: _buildDropdownField(
-                            provider.state.country ?? 'Choose country',
-                            true,
-                            isSelected: provider.state.country != null,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // --- SELECT STATE BOTTOM SHEET ---
-                        GestureDetector(
-                          onTap: () async {
-                            if (provider.state.country == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please choose a country first'),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                              return;
-                            }
-                            final result = await showModalBottomSheet<String>(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => SelectStateScreen(
-                                country: provider.state.country!,
-                                initialSelection: provider.state.state ?? '',
-                              ),
-                            );
-                            if (result != null) {
-                              provider.setStateName(result);
-                            }
-                          },
-                          child: _buildDropdownField(
-                            provider.state.state ?? 'Choose state',
-                            false,
-                            isSelected: provider.state.state != null,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // --- ENTER CITY ---
-                        _buildTextField(
-                          hintText: 'Enter city',
-                          controller: _cityController,
-                          onChanged: provider.setCity,
-                        ),
-                        const SizedBox(height: 24),
                         _buildGenderSelection(provider),
                         const SizedBox(height: 16),
 

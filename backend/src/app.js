@@ -5,6 +5,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const doctorRoutes = require('./routes/doctor.routes');
+const patientRoutes = require('./routes/patient.routes');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/v1', dashboardRoutes);
 app.use('/api/v1/doctors', doctorRoutes);
+app.use('/api/v1/patients', patientRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
