@@ -1,4 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
+const fs = require('fs');
+const path = require('path');
 const prisma = new PrismaClient();
 
 class DoctorController {
@@ -71,8 +73,10 @@ class DoctorController {
     }
   }
 
-  // POST /api/v1/doctors
+  // POST /api/v1/doctors (Supports multipart/form-data with transaction rollback file cleanup)
   async createDoctor(req, res) {
+    let uploadedFilePath = null;
+
     try {
       const {
         full_name,
@@ -95,68 +99,99 @@ class DoctorController {
       } = req.body;
 
       if (!full_name) {
+        // If file was uploaded by multer but form-validation failed, clean it immediately
+        if (req.file) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch (e) {
+            console.error('File cleanup error:', e);
+          }
+        }
         return res.status(400).json({
           success: false,
           error: 'Full name is required',
         });
       }
 
-      // Create doctor
-      const newDoctor = await prisma.doctor.create({
-        data: {
-          full_name,
-          profile_image_url: profile_image_url || 'images/doctors/default.jpg',
-          gender: gender || 'Male',
-          email,
-          phone_number,
-          address,
-          specialization: specialization || 'General Practitioner',
-          experience: experience || '1+ Years',
-          education: education || 'Medical Degree',
-          license_number,
-          status: status || 'Available',
-          working_hours: working_hours || '9AM - 2PM',
-          rating: rating ? parseFloat(rating) : 4.5,
-          total_reviews: total_reviews ? parseInt(total_reviews) : 0,
-          total_patients: total_patients ? parseInt(total_patients) : 0,
-          surgeries: surgeries ? parseInt(surgeries) : 0,
-          patients_increase_percent: patients_increase_percent ? parseFloat(patients_increase_percent) : 0.0,
-        },
-      });
+      // If multer received a file, store its path and construct its public URL
+      let finalProfileImageUrl = profile_image_url || 'images/doctors/default.jpg';
+      if (req.file) {
+        uploadedFilePath = req.file.path;
+        // Construct standard relative URL served statically via Express
+        finalProfileImageUrl = `uploads/${req.file.filename}`;
+      }
 
-      // Auto-generate standard availability slots for ease of testing on frontend
-      const defaultSlots = [
-        '09.00:AM',
-        '09.30:AM',
-        '10.00:AM',
-        '10.30:AM',
-        '11.30:AM',
-        '12.00:PM',
-        '02.00:PM',
-        '02.30:PM',
-      ];
-
-      const slotPromises = defaultSlots.map((slot) =>
-        prisma.availabilitySlot.create({
+      // Execute entire Doctor creation and default availability slots inside a single atomic Database Transaction!
+      const newDoctor = await prisma.$transaction(async (tx) => {
+        // Create the doctor record
+        const created = await tx.doctor.create({
           data: {
-            doctor_id: newDoctor.id,
-            time_slot: slot,
-            is_booked: slot === '09.00:AM' || slot === '12.00:PM', // seed some bookings
+            full_name,
+            profile_image_url: finalProfileImageUrl,
+            gender: gender || 'Male',
+            email: email || '',
+            phone_number: phone_number || '',
+            address: address || '',
+            specialization: specialization || 'General Practitioner',
+            experience: experience || '1+ Years',
+            education: education || 'Medical Degree',
+            license_number: license_number || '',
+            status: status || 'Available',
+            working_hours: working_hours || '9AM - 2PM',
+            rating: rating ? parseFloat(rating) : 4.5,
+            total_reviews: total_reviews ? parseInt(total_reviews) : 0,
+            total_patients: total_patients ? parseInt(total_patients) : 0,
+            surgeries: surgeries ? parseInt(surgeries) : 0,
+            patients_increase_percent: patients_increase_percent ? parseFloat(patients_increase_percent) : 0.0,
           },
-        })
-      );
+        });
 
-      await Promise.all(slotPromises);
+        // Auto-generate default availability slots inside transaction
+        const defaultSlots = [
+          '09.00:AM',
+          '09.30:AM',
+          '10.00:AM',
+          '10.30:AM',
+          '11.30:AM',
+          '12.00:PM',
+          '02.00:PM',
+          '02.30:PM',
+        ];
+
+        for (const slot of defaultSlots) {
+          await tx.availabilitySlot.create({
+            data: {
+              doctor_id: created.id,
+              time_slot: slot,
+              is_booked: slot === '09.00:AM' || slot === '12.00:PM', // mock some initial booked slots
+            },
+          });
+        }
+
+        return created;
+      });
 
       return res.status(201).json({
         success: true,
         data: newDoctor,
       });
+
     } catch (error) {
-      console.error('Error in createDoctor:', error);
+      console.error('Error in transactional createDoctor:', error);
+
+      // ROLLBACK FILE SYSTEM: If database transaction failed, delete the newly uploaded file to avoid storage garbage!
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        try {
+          fs.unlinkSync(uploadedFilePath);
+          console.log(`Cleaned up garbage file successfully on rollback: ${uploadedFilePath}`);
+        } catch (unlinkErr) {
+          console.error('Failed to delete garbage file on rollback:', unlinkErr);
+        }
+      }
+
       return res.status(500).json({
         success: false,
-        error: 'Failed to create new doctor',
+        error: 'Failed to create new doctor in database',
       });
     }
   }

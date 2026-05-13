@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../theme/app_colors.dart';
 import '../models/doctor_model.dart';
 import '../repositories/doctor_repository.dart';
@@ -146,6 +147,12 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     ImageProvider profileImage;
     if (_doctor.profileImageUrl != null && _doctor.profileImageUrl!.startsWith('images/')) {
       profileImage = AssetImage(_doctor.profileImageUrl!);
+    } else if (_doctor.profileImageUrl != null && _doctor.profileImageUrl!.startsWith('uploads/')) {
+      final host = kIsWeb ? Uri.base.host : '192.168.1.8';
+      final finalHost = (host.isEmpty || host == 'localhost') ? '192.168.1.8' : host;
+      profileImage = NetworkImage('http://$finalHost:3000/${_doctor.profileImageUrl!}');
+    } else if (_doctor.profileImageUrl != null && _doctor.profileImageUrl!.startsWith('http')) {
+      profileImage = NetworkImage(_doctor.profileImageUrl!);
     } else {
       profileImage = const AssetImage('images/avatars-doctor/avatar-1.jpg');
     }
@@ -394,10 +401,12 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.85,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 0.85,
+                  ),
                   itemCount: activeAppointments.length,
                   itemBuilder: (context, idx) {
                     final app = activeAppointments[idx];

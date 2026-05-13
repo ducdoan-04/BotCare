@@ -1,10 +1,19 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../models/login_response.dart';
 
 class AuthService {
   // Configured for local Node.js backend
-  static const String baseUrl = 'http://localhost:3000/api';
+  static String get baseUrl {
+    if (kIsWeb) {
+      final host = Uri.base.host;
+      if (host.isNotEmpty && host != 'localhost') {
+        return 'http://$host:3000/api';
+      }
+    }
+    return 'http://192.168.1.8:3000/api';
+  }
 
   static Future<LoginResponse> login(String email, String password) async {
     try {

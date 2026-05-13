@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../theme/app_colors.dart';
 import '../repositories/doctor_repository.dart';
 import '../models/doctor_model.dart';
@@ -398,6 +399,12 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     ImageProvider profileImage;
     if (doctor.profileImageUrl != null && doctor.profileImageUrl!.startsWith('images/')) {
       profileImage = AssetImage(doctor.profileImageUrl!);
+    } else if (doctor.profileImageUrl != null && doctor.profileImageUrl!.startsWith('uploads/')) {
+      final host = kIsWeb ? Uri.base.host : '192.168.1.8';
+      final finalHost = (host.isEmpty || host == 'localhost') ? '192.168.1.8' : host;
+      profileImage = NetworkImage('http://$finalHost:3000/${doctor.profileImageUrl!}');
+    } else if (doctor.profileImageUrl != null && doctor.profileImageUrl!.startsWith('http')) {
+      profileImage = NetworkImage(doctor.profileImageUrl!);
     } else {
       profileImage = const AssetImage('images/avatars-doctor/avatar-1.jpg');
     }

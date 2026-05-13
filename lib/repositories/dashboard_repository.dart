@@ -1,11 +1,20 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart' show rootBundle;
 import '../services/storage_service.dart';
 import '../models/dashboard_data.dart';
 
 class DashboardRepository {
-  static const String baseUrl = 'http://localhost:3000/api/v1';
+  static String get baseUrl {
+    if (kIsWeb) {
+      final host = Uri.base.host;
+      if (host.isNotEmpty && host != 'localhost') {
+        return 'http://$host:3000/api/v1';
+      }
+    }
+    return 'http://192.168.1.8:3000/api/v1';
+  }
 
   // Set to true to test the frontend UI with fake data from assets/json/dashboard_mock.json!
   static const bool useMockData = true;
