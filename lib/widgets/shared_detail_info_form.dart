@@ -66,7 +66,7 @@ class SharedDetailInfoForm extends StatelessWidget {
         _buildDropdown(
           label: 'Specialist Department',
           value: specialistDepartment,
-          items: ['General Practitioner', 'Cardiology', 'Dermatology', 'Pediatrics', 'Neurology'],
+          items: ['General Practitioner', 'Cardiology', 'Dermatology', 'Pediatrics', 'Neurology', 'Hematology', 'Gynecology'],
           onChanged: onDepartmentChanged,
           hint: 'Choose department',
         ),
@@ -79,7 +79,7 @@ class SharedDetailInfoForm extends StatelessWidget {
                 label: 'Assigned Doctor',
                 value: assignedDoctorId,
                 items: availableDoctors.map((d) => d.id).toList(),
-                itemLabels: availableDoctors.map((d) => d.fullName).toList(),
+                itemLabels: availableDoctors.map((d) => "${d.fullName} (${d.specialization} - ${d.experience})").toList(),
                 onChanged: onDoctorChanged,
                 hint: 'Choose doctor',
               ),

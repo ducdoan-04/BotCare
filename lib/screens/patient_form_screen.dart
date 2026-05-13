@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_colors.dart';
 import '../models/patient.dart';
 import '../providers/add_patient_provider.dart';
@@ -236,9 +236,11 @@ class _PatientFormScreenState extends State<PatientFormScreen> with SingleTicker
       country: provider.state.country,
       stateName: provider.state.state,
       onPickAvatar: () async {
-        FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
-        if (result != null) {
-          provider.setAvatar(bytes: result.files.first.bytes, path: result.files.first.path);
+        final ImagePicker picker = ImagePicker();
+        final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+        if (image != null) {
+          final bytes = await image.readAsBytes();
+          provider.setAvatar(bytes: bytes, path: image.path);
         }
       },
       onFullNameChanged: provider.setFullName,
@@ -367,9 +369,13 @@ class _PatientFormScreenState extends State<PatientFormScreen> with SingleTicker
           specialistDepartment: provider.state.specialistDepartment,
           assignedDoctorId: provider.state.assignedDoctorId,
           status: provider.state.status,
-          registeredAt: DateTime.now().toIso8601String(),
+          registeredAt: DateTime.now(),
         );
-        final p = await _patientRepo.createPatient(newPatient, avatarBytes: provider.state.avatarBytes);
+        final p = await _patientRepo.createPatient(
+          newPatient, 
+          provider.state.avatarPath, 
+          provider.state.avatarBytes
+        );
         success = true;
       }
 

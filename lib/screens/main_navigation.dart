@@ -5,7 +5,7 @@ import 'doctors_screen.dart';
 import 'patients_screen.dart';
 import 'appointments_screen.dart';
 import 'messages_screen.dart';
-import 'staff_screen.dart';
+import 'staff_list_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -21,7 +21,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const DashboardScreen(),
     const DoctorsScreen(),
     const PatientsScreen(),
-    const StaffScreen(),
+    const StaffListScreen(),
     const AppointmentsScreen(),
     const MessagesScreen(),
   ];

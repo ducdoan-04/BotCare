@@ -21,5 +21,6 @@ const authMiddleware = require('../middlewares/auth.middleware');
 router.get('/', authMiddleware, patientController.listPatients);
 router.post('/', authMiddleware, upload.single('avatar'), patientController.createPatient);
 router.put('/:id', authMiddleware, upload.single('avatar'), patientController.updatePatient);
+router.delete('/:id', authMiddleware, patientController.deletePatient);
 
 module.exports = router;

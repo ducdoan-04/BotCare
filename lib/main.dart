@@ -6,7 +6,11 @@ import 'providers/auth_provider.dart';
 import 'providers/add_doctor_provider.dart';
 import 'providers/add_patient_provider.dart';
 
-void main() {
+import 'services/storage_service.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await StorageService.init();
   runApp(
     MultiProvider(
       providers: [

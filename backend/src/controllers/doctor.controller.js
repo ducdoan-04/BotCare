@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 class DoctorController {
@@ -21,7 +22,7 @@ class DoctorController {
 
       if (specialty && specialty.trim() !== '' && specialty.toLowerCase() !== 'all') {
         whereClause.specialization = {
-          equals: specialty.trim(),
+          contains: specialty.trim(),
           mode: 'insensitive',
         };
       }
@@ -106,19 +107,31 @@ class DoctorController {
       }
 
       // ── 2. Uniqueness checks (username + email) — BEFORE uploading file ──
-      if (username) {
-        const existingUser = await prisma.user.findUnique({ where: { username: username.trim() } });
+      const trimmedUsername = username ? username.trim() : null;
+      const trimmedEmail = email ? email.trim() : (trimmedUsername ? `${trimmedUsername}@carebot.local` : null);
+
+      if (trimmedUsername) {
+        const existingUser = await prisma.user.findUnique({ where: { username: trimmedUsername } });
         if (existingUser) {
           if (req.file) fs.unlinkSync(req.file.path);
-          return res.status(409).json({ success: false, error: `Username "${username}" is already taken. Please choose another.` });
+          return res.status(409).json({ 
+            success: false, 
+            error: `The username "${trimmedUsername}" is already taken. Please choose another.` 
+          });
         }
       }
 
-      if (email) {
-        const existingEmail = await prisma.user.findFirst({ where: { email: email.trim() } });
-        if (existingEmail) {
+      if (trimmedEmail) {
+        // Check both User and Doctor tables for email uniqueness
+        const existingUserEmail = await prisma.user.findUnique({ where: { email: trimmedEmail } });
+        const existingDoctorEmail = await prisma.doctor.findFirst({ where: { email: trimmedEmail } });
+        
+        if (existingUserEmail || existingDoctorEmail) {
           if (req.file) fs.unlinkSync(req.file.path);
-          return res.status(409).json({ success: false, error: `Email "${email}" is already registered to another account.` });
+          return res.status(409).json({ 
+            success: false, 
+            error: `The email "${trimmedEmail}" is already registered. Please use a different email.` 
+          });
         }
       }
 
@@ -140,11 +153,11 @@ class DoctorController {
       const newDoctor = await prisma.$transaction(async (tx) => {
         // 5a. Create User account (if username + password provided)
         let newUser = null;
-        if (username && passwordHash) {
+        if (trimmedUsername && passwordHash) {
           newUser = await tx.user.create({
             data: {
-              username: username.trim(),
-              email: email ? email.trim() : `${username.trim()}@carebot.local`,
+              username: trimmedUsername,
+              email: trimmedEmail,
               password_hash: passwordHash,
               full_name: full_name.trim(),
               role: 'DOCTOR',
@@ -200,67 +213,132 @@ class DoctorController {
     } catch (error) {
       console.error('Error in transactional createDoctor:', error);
 
-      // ROLLBACK FILE SYSTEM: delete uploaded avatar if DB transaction failed
       if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
         try {
           fs.unlinkSync(uploadedFilePath);
-          console.log(`Cleaned up orphaned upload on rollback: ${uploadedFilePath}`);
         } catch (unlinkErr) {
           console.error('Failed to clean up file on rollback:', unlinkErr);
         }
       }
 
-      // Handle Prisma unique constraint errors gracefully
+      let errorMessage = 'Failed to create new doctor. Please try again.';
+      
+      // Detailed error handling for Prisma errors
       if (error.code === 'P2002') {
-        const field = error.meta?.target?.[0] || 'field';
-        return res.status(409).json({ success: false, error: `${field} already exists. Please use a different value.` });
+        const target = error.meta?.target;
+        const field = Array.isArray(target) ? target.join(', ') : (target || 'field');
+        errorMessage = `Conflict: ${field} already exists. Please use unique values.`;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
-      return res.status(500).json({ success: false, error: 'Failed to create new doctor. Please try again.' });
+      return res.status(409).json({ 
+        success: false, 
+        error: errorMessage 
+      });
     }
   }
 
 
   // PUT /api/v1/doctors/:id
   async updateDoctor(req, res) {
+    let uploadedFilePath = null;
     try {
       const { id } = req.params;
-      const updateData = req.body;
+      const { username, password, ...updateData } = req.body;
 
-      // Remove relationships or ID from body if passed accidentally
-      delete updateData.id;
-      delete updateData.appointments;
-      delete updateData.availability_slots;
+      // 1. Check if doctor exists
+      const existingDoctor = await prisma.doctor.findUnique({ 
+        where: { id },
+        include: { user: true }
+      });
 
-      // Handle conversions
-      if (updateData.rating !== undefined) updateData.rating = parseFloat(updateData.rating);
-      if (updateData.total_reviews !== undefined) updateData.total_reviews = parseInt(updateData.total_reviews);
-      if (updateData.total_patients !== undefined) updateData.total_patients = parseInt(updateData.total_patients);
-      if (updateData.surgeries !== undefined) updateData.surgeries = parseInt(updateData.surgeries);
-      if (updateData.patients_increase_percent !== undefined) {
-        updateData.patients_increase_percent = parseFloat(updateData.patients_increase_percent);
+      if (!existingDoctor) {
+        if (req.file) fs.unlinkSync(req.file.path);
+        return res.status(404).json({ success: false, error: 'Doctor not found' });
       }
 
-      const updatedDoctor = await prisma.doctor.update({
-        where: { id },
-        data: updateData,
+      // 2. Define allowed fields and filter body
+      const allowedFields = [
+        'full_name', 'gender', 'email', 'phone_number', 'address',
+        'specialization', 'experience', 'education', 'license_number',
+        'status', 'working_hours'
+      ];
+
+      const cleanedData = {};
+      allowedFields.forEach(field => {
+        if (updateData[field] !== undefined) {
+          cleanedData[field] = updateData[field];
+        }
+      });
+
+      // 3. Handle file upload
+      if (req.file) {
+        uploadedFilePath = req.file.path;
+        cleanedData.profile_image_url = `uploads/${req.file.filename}`;
+        
+        if (existingDoctor.profile_image_url && 
+            existingDoctor.profile_image_url.startsWith('uploads/') &&
+            !existingDoctor.profile_image_url.includes('default.jpg')) {
+          const oldPath = path.join(__dirname, '../../public', existingDoctor.profile_image_url);
+          if (fs.existsSync(oldPath)) fs.unlink(oldPath, () => {});
+        }
+      }
+
+      // 4. Handle numeric conversions
+      if (updateData.rating !== undefined) cleanedData.rating = parseFloat(updateData.rating);
+      if (updateData.total_reviews !== undefined) cleanedData.total_reviews = parseInt(updateData.total_reviews);
+      if (updateData.total_patients !== undefined) cleanedData.total_patients = parseInt(updateData.total_patients);
+      if (updateData.surgeries !== undefined) cleanedData.surgeries = parseInt(updateData.surgeries);
+      if (updateData.patients_increase_percent !== undefined) {
+        cleanedData.patients_increase_percent = parseFloat(updateData.patients_increase_percent);
+      }
+
+      // 5. Transactional update for Doctor and User
+      const result = await prisma.$transaction(async (tx) => {
+        // Update User account if provided
+        if ((username || password) && existingDoctor.user_id) {
+          const userData = {};
+          if (username) userData.username = username;
+          if (password) userData.password_hash = await bcrypt.hash(password, 10);
+          
+          await tx.user.update({
+            where: { id: existingDoctor.user_id },
+            data: userData,
+          });
+        }
+
+        // Update Doctor profile
+        return await tx.doctor.update({
+          where: { id },
+          data: cleanedData,
+        });
       });
 
       return res.status(200).json({
         success: true,
-        data: updatedDoctor,
+        data: result,
       });
     } catch (error) {
       console.error('Error in updateDoctor:', error);
-      if (error.code === 'P2025') {
-        return res.status(404).json({
-          success: false,
-          error: 'Doctor not found to update',
+      
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        fs.unlinkSync(uploadedFilePath);
+      }
+
+      // Handle Unique Constraint (409 Conflict)
+      if (error.code === 'P2002') {
+        const target = error.meta?.target;
+        const field = Array.isArray(target) ? target.join(', ') : (target || 'field');
+        return res.status(409).json({ 
+          success: false, 
+          error: `Conflict: ${field} is already taken. Please use a different value.` 
         });
       }
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to update doctor profile',
+
+      return res.status(409).json({ 
+        success: false, 
+        error: error.message || 'Failed to update doctor profile' 
       });
     }
   }

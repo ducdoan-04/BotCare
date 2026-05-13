@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const fs = require('fs');
+const path = require('path');
 
 class PatientController {
   // GET /api/v1/patients
@@ -9,7 +10,7 @@ class PatientController {
       const { search, date } = req.query;
 
       // 1. Build filter
-      let whereClause = {};
+      let whereClause = { deleted_at: null };
       if (search) {
         whereClause.full_name = { contains: search, mode: 'insensitive' };
       }
@@ -101,8 +102,10 @@ class PatientController {
 
       return res.status(200).json({
         success: true,
-        data: formattedPatients,
-        stats: stats
+        data: {
+          patients: formattedPatients,
+          stats: stats
+        }
       });
 
     } catch (error) {
@@ -150,6 +153,14 @@ class PatientController {
       });
 
       return res.status(201).json({ success: true, data: newPatient });
+    } catch (error) {
+      console.error('Error creating patient:', error);
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        fs.unlinkSync(uploadedFilePath);
+      }
+      return res.status(500).json({ success: false, error: 'Failed to create patient' });
+    }
+  }
 
   // PUT /api/v1/patients/:id
   async updatePatient(req, res) {
@@ -223,6 +234,23 @@ class PatientController {
         fs.unlinkSync(uploadedFilePath);
       }
       return res.status(500).json({ success: false, error: 'Failed to update patient' });
+    }
+  }
+
+  // DELETE /api/v1/patients/:id
+  async deletePatient(req, res) {
+    try {
+      const { id } = req.params;
+      
+      // Soft delete
+      await prisma.patient.delete({
+        where: { id }
+      });
+
+      return res.status(200).json({ success: true, message: 'Patient deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting patient:', error);
+      return res.status(500).json({ success: false, error: 'Internal server error' });
     }
   }
 }

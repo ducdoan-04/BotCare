@@ -362,26 +362,7 @@ class DoctorRepository {
   }) async {
     if (useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
-      final newDoctor = Doctor(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        fullName: doctor.fullName,
-        profileImageUrl: doctor.profileImageUrl ?? 'images/doctors/default.jpg',
-        gender: doctor.gender,
-        email: doctor.email,
-        phoneNumber: doctor.phoneNumber,
-        address: doctor.address,
-        specialization: doctor.specialization,
-        experience: doctor.experience,
-        education: doctor.education,
-        licenseNumber: doctor.licenseNumber,
-        status: doctor.status,
-        workingHours: doctor.workingHours,
-        rating: doctor.rating,
-        totalReviews: doctor.totalReviews,
-        totalPatients: doctor.totalPatients,
-        surgeries: doctor.surgeries,
-        patientsIncreasePercent: doctor.patientsIncreasePercent,
-      );
+      final newDoctor = doctor.copyWith(id: DateTime.now().millisecondsSinceEpoch.toString());
       _mockDoctors.add(newDoctor);
       return newDoctor;
     }
@@ -439,19 +420,27 @@ class DoctorRepository {
         if (resData['success'] == true) {
           return Doctor.fromJson(resData['data']);
         } else {
-          throw Exception(resData['error'] ?? 'Failed to create doctor');
+          throw Exception(resData['error'] ?? 'Failed to create doctor record.');
         }
       } else if (response.statusCode == 401) {
         await StorageService.clear();
-        throw Exception('401 Unauthorized. Your token expired. Please hit F5 (refresh page) to login again!');
-      } else {
+        throw Exception('401 Unauthorized. Your session expired. Please refresh the page to login again.');
+      } else if (response.statusCode == 409) {
+        // Handle Conflict specifically
         try {
           final resData = jsonDecode(response.body);
-          if (resData != null && resData['error'] != null) {
-            throw Exception(resData['error']);
-          }
-        } catch (_) {}
-        throw Exception('Server returned status: ${response.statusCode}');
+          throw Exception(resData['error'] ?? 'Conflict: A doctor with this username or email already exists.');
+        } catch (_) {
+          throw Exception('Conflict: This information is already registered in our system.');
+        }
+      } else {
+        // Handle other errors (400, 500, etc.)
+        try {
+          final resData = jsonDecode(response.body);
+          throw Exception(resData['error'] ?? 'Server error: ${response.statusCode}');
+        } catch (_) {
+          throw Exception('Server returned status: ${response.statusCode}');
+        }
       }
     } catch (e) {
       print('Multipart upload failed: $e');
@@ -460,50 +449,39 @@ class DoctorRepository {
   }
 
   // PUT /api/v1/doctors/:id
-  Future<Doctor> updateDoctor(String id, Map<String, dynamic> updateData) async {
-    if (useMockData) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      final index = _mockDoctors.indexWhere((doc) => doc.id == id);
-      if (index != -1) {
-        final current = _mockDoctors[index];
-        final updated = Doctor(
-          id: current.id,
-          fullName: updateData['full_name'] ?? current.fullName,
-          profileImageUrl: updateData['profile_image_url'] ?? current.profileImageUrl,
-          gender: updateData['gender'] ?? current.gender,
-          email: updateData['email'] ?? current.email,
-          phoneNumber: updateData['phone_number'] ?? current.phoneNumber,
-          address: updateData['address'] ?? current.address,
-          specialization: updateData['specialization'] ?? current.specialization,
-          experience: updateData['experience'] ?? current.experience,
-          education: updateData['education'] ?? current.education,
-          licenseNumber: updateData['license_number'] ?? current.licenseNumber,
-          status: updateData['status'] ?? current.status,
-          workingHours: updateData['working_hours'] ?? current.workingHours,
-          rating: updateData['rating'] != null ? (updateData['rating'] as num).toDouble() : current.rating,
-          totalReviews: updateData['total_reviews'] ?? current.totalReviews,
-          totalPatients: updateData['total_patients'] ?? current.totalPatients,
-          surgeries: updateData['surgeries'] ?? current.surgeries,
-          patientsIncreasePercent: updateData['patients_increase_percent'] != null 
-              ? (updateData['patients_increase_percent'] as num).toDouble() 
-              : current.patientsIncreasePercent,
-        );
-        _mockDoctors[index] = updated;
-        return updated;
-      }
-      throw Exception('Doctor not found in mock list');
-    }
-
+  Future<Doctor> updateDoctor(String id, Map<String, dynamic> updateData, {String? avatarPath, Uint8List? avatarBytes}) async {
     try {
       final token = await StorageService.read('accessToken');
-      final response = await http.put(
-        Uri.parse('$baseUrl/$id'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(updateData),
-      );
+      final uri = Uri.parse('$baseUrl/$id');
+      final request = http.MultipartRequest('PUT', uri);
+
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+
+      // Bind fields from map
+      updateData.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+
+      // Bind avatar file if present (using bytes for Web, path for Native)
+      if (avatarBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'profile_image',
+          avatarBytes,
+          filename: 'doctor_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        ));
+      } else if (avatarPath != null && avatarPath.isNotEmpty && !kIsWeb) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'profile_image',
+          avatarPath,
+        ));
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final resData = jsonDecode(response.body);
@@ -513,39 +491,22 @@ class DoctorRepository {
           throw Exception(resData['error'] ?? 'Failed to update doctor');
         }
       } else {
-        throw Exception('Server status: ${response.statusCode}');
+        String serverError = '[Server Error ${response.statusCode}]: ';
+        try {
+          final resData = jsonDecode(response.body);
+          if (resData != null && resData['error'] != null) {
+            serverError += resData['error'];
+          } else {
+            serverError += 'No detail provided by server.';
+          }
+        } catch (_) {
+          serverError += 'Could not parse error body.';
+        }
+        throw Exception(serverError);
       }
     } catch (e) {
-      print('Error in updateDoctor, falling back to mock: $e');
-      final index = _mockDoctors.indexWhere((doc) => doc.id == id);
-      if (index != -1) {
-        final current = _mockDoctors[index];
-        final updated = Doctor(
-          id: current.id,
-          fullName: updateData['full_name'] ?? current.fullName,
-          profileImageUrl: updateData['profile_image_url'] ?? current.profileImageUrl,
-          gender: updateData['gender'] ?? current.gender,
-          email: updateData['email'] ?? current.email,
-          phoneNumber: updateData['phone_number'] ?? current.phoneNumber,
-          address: updateData['address'] ?? current.address,
-          specialization: updateData['specialization'] ?? current.specialization,
-          experience: updateData['experience'] ?? current.experience,
-          education: updateData['education'] ?? current.education,
-          licenseNumber: updateData['license_number'] ?? current.licenseNumber,
-          status: updateData['status'] ?? current.status,
-          workingHours: updateData['working_hours'] ?? current.workingHours,
-          rating: updateData['rating'] != null ? (updateData['rating'] as num).toDouble() : current.rating,
-          totalReviews: updateData['total_reviews'] ?? current.totalReviews,
-          totalPatients: updateData['total_patients'] ?? current.totalPatients,
-          surgeries: updateData['surgeries'] ?? current.surgeries,
-          patientsIncreasePercent: updateData['patients_increase_percent'] != null 
-              ? (updateData['patients_increase_percent'] as num).toDouble() 
-              : current.patientsIncreasePercent,
-        );
-        _mockDoctors[index] = updated;
-        return updated;
-      }
-      throw Exception('Failed to update doctor: $e');
+      print('Error in updateDoctor: $e');
+      rethrow;
     }
   }
 

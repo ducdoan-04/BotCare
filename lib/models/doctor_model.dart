@@ -39,6 +39,48 @@ class Doctor {
     required this.patientsIncreasePercent,
   });
 
+  Doctor copyWith({
+    String? id,
+    String? fullName,
+    String? profileImageUrl,
+    String? gender,
+    String? email,
+    String? phoneNumber,
+    String? address,
+    String? specialization,
+    String? experience,
+    String? education,
+    String? licenseNumber,
+    String? status,
+    String? workingHours,
+    double? rating,
+    int? totalReviews,
+    int? totalPatients,
+    int? surgeries,
+    double? patientsIncreasePercent,
+  }) {
+    return Doctor(
+      id: id ?? this.id,
+      fullName: fullName ?? this.fullName,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      gender: gender ?? this.gender,
+      email: email ?? this.email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      address: address ?? this.address,
+      specialization: specialization ?? this.specialization,
+      experience: experience ?? this.experience,
+      education: education ?? this.education,
+      licenseNumber: licenseNumber ?? this.licenseNumber,
+      status: status ?? this.status,
+      workingHours: workingHours ?? this.workingHours,
+      rating: rating ?? this.rating,
+      totalReviews: totalReviews ?? this.totalReviews,
+      totalPatients: totalPatients ?? this.totalPatients,
+      surgeries: surgeries ?? this.surgeries,
+      patientsIncreasePercent: patientsIncreasePercent ?? this.patientsIncreasePercent,
+    );
+  }
+
   factory Doctor.fromJson(Map<String, dynamic> json) {
     return Doctor(
       id: json['id'] ?? '',

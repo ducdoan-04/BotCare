@@ -214,9 +214,8 @@ class _PatientsScreenState extends State<PatientsScreen> {
                           );
                           if (result == true) _loadData();
                         }),
-                        const SizedBox(width: 8),
                         _buildActionIcon(Icons.delete_outline, AppColors.error, onTap: () {
-                          // Implement delete logic if needed
+                          _showDeleteDialog(p);
                         }),
                       ],
                     ),
@@ -224,6 +223,41 @@ class _PatientsScreenState extends State<PatientsScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(Patient patient) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Patient'),
+        content: Text('Are you sure you want to delete ${patient.fullName}?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog
+              try {
+                final success = await _repository.deletePatient(patient.id);
+                if (success) {
+                  // Internal State Update: Remove from local list instead of re-fetching
+                  setState(() {
+                    _patients.removeWhere((p) => p.id == patient.id);
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Patient deleted successfully'), backgroundColor: AppColors.success),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.toString()), backgroundColor: AppColors.error),
+                );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),

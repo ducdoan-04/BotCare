@@ -87,6 +87,10 @@ class AddPatientProvider with ChangeNotifier {
   bool _isLoadingDoctors = false;
   bool get isLoadingDoctors => _isLoadingDoctors;
 
+  AddPatientProvider() {
+    fetchAllDoctors();
+  }
+
   // --- Step 1 Setters ---
   void setFullName(String v) { _state = _state.copyWith(fullName: v); notifyListeners(); }
   void setEmail(String v) { _state = _state.copyWith(email: v); notifyListeners(); }
@@ -113,9 +117,11 @@ class AddPatientProvider with ChangeNotifier {
     notifyListeners();
     
     try {
+      debugPrint('Fetching doctors for specialty: $v');
       _availableDoctors = await _doctorRepo.fetchDoctors(specialty: v);
+      debugPrint('Found ${_availableDoctors.length} doctors for $v');
     } catch (e) {
-      print('Error fetching doctors for department $v: $e');
+      debugPrint('Error fetching doctors for department $v: $e');
       _availableDoctors = [];
     } finally {
       _isLoadingDoctors = false;
@@ -130,7 +136,23 @@ class AddPatientProvider with ChangeNotifier {
   void reset() {
     _state = AddPatientFormState();
     _availableDoctors = [];
+    fetchAllDoctors(); // Fetch all initially
     notifyListeners();
+  }
+
+  Future<void> fetchAllDoctors() async {
+    _isLoadingDoctors = true;
+    notifyListeners();
+    try {
+      _availableDoctors = await _doctorRepo.fetchDoctors();
+      debugPrint('Fetched all doctors: ${_availableDoctors.length}');
+    } catch (e) {
+      debugPrint('Error fetching all doctors: $e');
+      _availableDoctors = [];
+    } finally {
+      _isLoadingDoctors = false;
+      notifyListeners();
+    }
   }
 
   void initWithExistingPatient(Patient p) {

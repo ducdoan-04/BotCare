@@ -9,7 +9,7 @@ class DashboardRepository {
   static String get baseUrl {
     if (kIsWeb) {
       final host = Uri.base.host;
-      if (host.isNotEmpty && host != 'localhost') {
+      if (host.isNotEmpty) {
         return 'http://$host:3000/api/v1';
       }
     }

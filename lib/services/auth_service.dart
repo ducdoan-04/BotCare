@@ -8,10 +8,11 @@ class AuthService {
   static String get baseUrl {
     if (kIsWeb) {
       final host = Uri.base.host;
-      if (host.isNotEmpty && host != 'localhost') {
+      if (host.isNotEmpty) {
         return 'http://$host:3000/api';
       }
     }
+    // Fallback for mobile emulators or specific IP
     return 'http://192.168.1.8:3000/api';
   }
 
@@ -45,6 +46,7 @@ class AuthService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'fullName': fullName,
+          'full_name': fullName,
           'email': email,
           'password': password,
         }),

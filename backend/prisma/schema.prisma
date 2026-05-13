@@ -64,6 +64,7 @@ model Patient {
   assigned_doctor_id    String?
   specialist_department String?  // e.g. "Cardiology"
   registered_at         DateTime @default(now())
+  deleted_at            DateTime?
 
   assigned_doctor       Doctor?       @relation(fields: [assigned_doctor_id], references: [id], onDelete: SetNull)
   appointments          Appointment[]
@@ -115,4 +116,51 @@ model Polyclinic {
   name String
 
   @@map("polyclinics")
+}
+
+model Staff {
+  id                   String            @id @default(uuid())
+  full_name            String
+  profile_image_url    String?
+  role                 String            // "Nurse", "Pharmacist", "Receptionist", "Accountant"
+  shift                String?           @default("9AM - 2PM")
+  gender               String?
+  email                String?           @unique
+  phone                String?
+  address              String?
+  joining_date         DateTime          @default(now())
+  professional_summary String?
+  status               String            @default("Available") // "Available", "Off"
+  deleted_at           DateTime?
+
+  tasks               StaffTask[]
+  attendance          StaffAttendance[]
+
+  @@map("staffs")
+}
+
+model StaffTask {
+  id               String   @id @default(uuid())
+  staff_id         String
+  task_title       String
+  task_description String?
+  start_time       String?  // "09:00 AM"
+  end_time         String?  // "10:00 AM"
+  date             DateTime @default(now())
+  is_completed     Boolean  @default(false)
+
+  staff Staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+
+  @@map("staff_tasks")
+}
+
+model StaffAttendance {
+  id               String   @id @default(uuid())
+  staff_id         String
+  date             DateTime @default(now())
+  attendance_level Int      @default(0) // 0-Absent, 1-Less, 2-Half, 3-Full
+
+  staff Staff @relation(fields: [staff_id], references: [id], onDelete: Cascade)
+
+  @@map("staff_attendance")
 }

@@ -192,7 +192,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         const SizedBox(height: 16),
         _buildTextField('Enter allergies', _allergiesController, provider.setAllergies),
         const SizedBox(height: 16),
-        _buildDropdown('Choose specialist', ['Cardiology', 'Dermatology', 'Neurology', 'Pediatrics', 'General'], provider.state.specialistDepartment, provider.setSpecialistDepartment),
+        _buildDropdown('Choose specialist', ['General Practitioner', 'Cardiology', 'Dermatology', 'Pediatrics', 'Neurology', 'Hematology', 'Gynecology'], provider.state.specialistDepartment, provider.setSpecialistDepartment),
         const SizedBox(height: 16),
         
         // Cascading Doctor Dropdown

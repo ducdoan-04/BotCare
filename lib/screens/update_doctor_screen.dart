@@ -1,87 +1,130 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../theme/app_colors.dart';
 import '../repositories/doctor_repository.dart';
-import 'select_country_screen.dart';
-import 'select_state_screen.dart';
+import '../widgets/shared_basic_info_form.dart';
 
 class UpdateDoctorScreen extends StatefulWidget {
-  final Map<String, dynamic>? doctor;
-  final int? index;
+  final Map<String, dynamic> doctor;
+  final int? index; // Added for compatibility
 
-  const UpdateDoctorScreen({super.key, this.doctor, this.index});
+  const UpdateDoctorScreen({super.key, required this.doctor, this.index});
 
   @override
   State<UpdateDoctorScreen> createState() => _UpdateDoctorScreenState();
 }
 
-class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
-  final _repository = DoctorRepository();
+class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final DoctorRepository _repository = DoctorRepository();
 
-  late final TextEditingController _fullNameController;
-  late final TextEditingController _addressController;
-  late final TextEditingController _phoneController;
-  late final TextEditingController _experienceController;
-  late final TextEditingController _specializationController;
-  late final TextEditingController _licenseNumberController;
-  late final TextEditingController _educationController;
+  // Controllers
+  late TextEditingController _fullNameController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _addressController;
+  late TextEditingController _cityController;
+  
+  late TextEditingController _experienceController;
+  late TextEditingController _specializationController;
+  late TextEditingController _licenseNumberController;
+  late TextEditingController _educationController;
+  
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
 
-  int _activeTab = 0; // 0: Basic Info, 1: Detail Info, 2: Security
-  String _selectedPhoneCountry = 'United States';
+  String? _selectedCountry;
+  String? _selectedState;
   String _selectedGender = 'Female';
-  String? _selectedState = 'Alaska';
   bool _isSaving = false;
+
+  Uint8List? _avatarBytes;
+  String? _avatarPath;
+  String? _existingAvatarUrl;
 
   @override
   void initState() {
     super.initState();
-    final d = widget.doctor ?? {};
-
+    _tabController = TabController(length: 3, vsync: this);
+    
+    final d = widget.doctor;
     _fullNameController = TextEditingController(text: d['full_name'] ?? '');
-    _addressController = TextEditingController(text: d['address'] ?? '');
+    _emailController = TextEditingController(text: d['email'] ?? '');
     _phoneController = TextEditingController(text: d['phone_number'] ?? '');
+    _addressController = TextEditingController(text: d['address'] ?? '');
+    _cityController = TextEditingController(text: d['city'] ?? '');
     _experienceController = TextEditingController(text: d['experience'] ?? '');
     _specializationController = TextEditingController(text: d['specialization'] ?? '');
     _licenseNumberController = TextEditingController(text: d['license_number'] ?? '');
     _educationController = TextEditingController(text: d['education'] ?? '');
 
     _selectedGender = d['gender'] ?? 'Female';
+    _existingAvatarUrl = d['profile_image_url'];
+
+    // Try to extract country/state if address is comma-separated
+    if (d['address'] != null && d['address'].toString().contains(',')) {
+      final parts = d['address'].toString().split(',');
+      if (parts.length >= 4) {
+        _selectedState = parts[2].trim();
+        _selectedCountry = parts[3].trim();
+      }
+    }
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _fullNameController.dispose();
-    _addressController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
     _experienceController.dispose();
     _specializationController.dispose();
     _licenseNumberController.dispose();
     _educationController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _updateDoctor() async {
-    final d = widget.doctor;
-    if (d == null || d['id'] == null) {
-      Navigator.pop(context);
-      return;
-    }
-
-    if (_fullNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter full name'), backgroundColor: AppColors.error),
-      );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
+  Future<void> _pickAvatar() async {
     try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _avatarBytes = bytes;
+          _avatarPath = kIsWeb ? null : pickedFile.path;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking avatar: $e');
+    }
+  }
+
+  Future<void> _updateDoctor() async {
+    setState(() => _isSaving = true);
+    try {
+      final d = widget.doctor;
       final updatePayload = {
         'full_name': _fullNameController.text.trim(),
-        'address': _addressController.text.trim(),
+        'email': _emailController.text.trim(),
         'phone_number': _phoneController.text.trim(),
+        'address': [
+          _addressController.text.trim(),
+          _cityController.text.trim(),
+          _selectedState ?? '',
+          _selectedCountry ?? '',
+        ].where((s) => s.isNotEmpty).join(', '),
         'gender': _selectedGender,
         'experience': _experienceController.text.trim(),
         'specialization': _specializationController.text.trim(),
@@ -89,20 +132,30 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
         'education': _educationController.text.trim(),
       };
 
-      await _repository.updateDoctor(d['id'], updatePayload);
+      if (_usernameController.text.isNotEmpty) updatePayload['username'] = _usernameController.text.trim();
+      if (_passwordController.text.isNotEmpty) updatePayload['password'] = _passwordController.text.trim();
 
-      setState(() {
-        _isSaving = false;
-      });
-
-      _showSuccessDialog(context);
-    } catch (e) {
-      setState(() {
-        _isSaving = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating profile: $e'), backgroundColor: AppColors.error),
+      await _repository.updateDoctor(
+        d['id'], 
+        updatePayload,
+        avatarPath: _avatarPath,
+        avatarBytes: _avatarBytes,
       );
+
+      if (mounted) {
+        Navigator.pop(context, true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Doctor profile updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -112,157 +165,52 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(32),
-          topRight: Radius.circular(32),
-        ),
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
       ),
       child: Column(
         children: [
-          // --- HEADER ---
+          const SizedBox(height: 12),
+          Container(width: 48, height: 4, decoration: BoxDecoration(color: const Color(0xFFEAECF0), borderRadius: BorderRadius.circular(2)),),
+          const SizedBox(height: 16),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Update doctor',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close, size: 20, color: AppColors.textSecondary),
-                  ),
-                ),
+                const Text('Update doctor', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
               ],
             ),
           ),
+          const SizedBox(height: 8),
           const Divider(color: AppColors.border, height: 1),
-
-          // --- CONTENT ---
-          Expanded(
-            child: _isSaving 
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFF008394)))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // --- TABS ---
-                      Row(
-                        children: [
-                          _buildTabItem(0, 'Basic Info'),
-                          const SizedBox(width: 12),
-                          _buildTabItem(1, 'Detail Info'),
-                          const SizedBox(width: 12),
-                          _buildTabItem(2, 'Security'),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-
-                      if (_activeTab == 0) ...[
-                        // --- AVATAR UPLOAD ---
-                        Row(
-                          children: [
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                image: const DecorationImage(
-                                  image: AssetImage('images/avatars-doctor/avatar-1.jpg'),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'JPG or PNG, < 5 MB.',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(color: const Color(0xFF008394)),
-                                  ),
-                                  child: const Text(
-                                    'Upload New Picture',
-                                    style: TextStyle(
-                                      color: Color(0xFF008394),
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-
-                        // --- FORM FIELDS ---
-                        _buildTextField(hintText: 'Enter full name', controller: _fullNameController),
-                        const SizedBox(height: 16),
-                        _buildTextField(hintText: 'Enter address', controller: _addressController),
-                        const SizedBox(height: 16),
-                        _buildPhoneField(hintPhone: 'Enter phone number', controller: _phoneController),
-                        const SizedBox(height: 16),
-                        _buildDropdownField('United States', true),
-                        const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () async {
-                            final result = await showModalBottomSheet<String>(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => SelectStateScreen(
-                                initialSelection: _selectedState ?? 'Alaska',
-                              ),
-                            );
-                            if (result != null) {
-                              setState(() => _selectedState = result);
-                            }
-                          },
-                          child: _buildDropdownField(_selectedState ?? 'Alaska', false),
-                        ),
-                        const SizedBox(height: 24),
-                        _buildGenderSelection(),
-                      ] else if (_activeTab == 1) ...[
-                        _buildTextField(hintText: 'Enter experience (e.g. 10+ Years)', controller: _experienceController),
-                        const SizedBox(height: 16),
-                        _buildTextField(hintText: 'Enter specialization (e.g. Neurologist)', controller: _specializationController),
-                        const SizedBox(height: 16),
-                        _buildTextField(hintText: 'Enter license number (e.g. LIC-291829)', controller: _licenseNumberController),
-                        const SizedBox(height: 16),
-                        _buildTextField(hintText: 'Enter education credentials', controller: _educationController),
-                      ] else ...[
-                        _buildTextField(hintText: 'Update username (Optional)', controller: TextEditingController()),
-                        const SizedBox(height: 16),
-                        _buildTextField(hintText: 'Update password (Optional)', controller: TextEditingController()),
-                      ],
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              height: 48,
+              decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(24)),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
                 ),
+                labelColor: const Color(0xFF008394),
+                unselectedLabelColor: AppColors.textSecondary,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                tabs: const [Tab(text: 'Basic Info'), Tab(text: 'Detail Info'), Tab(text: 'Security')],
+              ),
+            ),
           ),
-
-          // --- FOOTER BUTTONS ---
+          const SizedBox(height: 24),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [_buildBasicInfoTab(), _buildDetailInfoTab(), _buildSecurityTab()],
+            ),
+          ),
           if (!_isSaving)
             Padding(
               padding: const EdgeInsets.all(24),
@@ -273,20 +221,9 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                       onTap: () => Navigator.pop(context),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: const Color(0xFF008394)),
-                        ),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(30), border: Border.all(color: const Color(0xFF008394))),
                         alignment: Alignment.center,
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: Color(0xFF008394),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child: const Text('Cancel', style: TextStyle(color: Color(0xFF008394), fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ),
@@ -296,146 +233,49 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                       onTap: _updateDoctor,
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF008394),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+                        decoration: BoxDecoration(color: const Color(0xFF008394), borderRadius: BorderRadius.circular(30)),
                         alignment: Alignment.center,
-                        child: const Text(
-                          'Update',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
+                        child: const Text('Update', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
+            )
+          else
+            const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: CircularProgressIndicator(color: Color(0xFF008394)))),
         ],
       ),
     );
   }
 
-  Widget _buildTabItem(int tabIndex, String label) {
-    final bool isSelected = _activeTab == tabIndex;
-    return GestureDetector(
-      onTap: () => setState(() => _activeTab = tabIndex),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE6F2F3) : Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: isSelected ? const Color(0xFF008394) : AppColors.border),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF008394) : AppColors.textSecondary,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({required String hintText, required TextEditingController controller}) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: const TextStyle(
-          color: Color(0xFFA0A5A9),
-          fontWeight: FontWeight.w500,
-          fontSize: 15,
-        ),
-        filled: true,
-        fillColor: const Color(0xFFF9F9F9),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPhoneField({required String hintPhone, required TextEditingController controller}) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
+  Widget _buildBasicInfoTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
         children: [
-          GestureDetector(
-            onTap: () async {
-              final result = await showModalBottomSheet<String>(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => SelectCountryScreen(
-                  initialSelection: _selectedPhoneCountry,
-                ),
-              );
-              if (result != null) {
-                setState(() => _selectedPhoneCountry = result);
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 20,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(2),
-                      image: DecorationImage(
-                        image: AssetImage('images/flags/Nation=${_getFlagAssetName(_selectedPhoneCountry)}.png'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(_getPhoneCode(_selectedPhoneCountry), style: const TextStyle(fontWeight: FontWeight.w500)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.textSecondary),
-                ],
-              ),
-            ),
+          SharedBasicInfoForm(
+            fullNameController: _fullNameController,
+            emailController: _emailController,
+            phoneController: _phoneController,
+            addressController: _addressController,
+            cityController: _cityController,
+            avatarBytes: _avatarBytes,
+            avatarPath: _avatarPath,
+            profileImageUrl: _existingAvatarUrl, // Handle server image
+            country: _selectedCountry,
+            stateName: _selectedState,
+            onPickAvatar: _pickAvatar,
+            onFullNameChanged: (v) => setState(() {}),
+            onEmailChanged: (v) => setState(() {}),
+            onPhoneChanged: (v) => setState(() {}),
+            onAddressChanged: (v) => setState(() {}),
+            onCityChanged: (v) => setState(() {}),
+            onCountryChanged: (v) => setState(() { _selectedCountry = v; _selectedState = null; }),
+            onStateChanged: (v) => setState(() => _selectedState = v),
           ),
-          Container(width: 1, height: 24, color: AppColors.border),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                hintText: hintPhone,
-                hintStyle: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 15,
-                ),
-                border: InputBorder.none,
-                fillColor: const Color(0xFFF9F9F9),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              ),
-            ),
-          ),
+          const SizedBox(height: 16),
+          _buildGenderSelection(),
         ],
       ),
     );
@@ -445,223 +285,80 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Gender',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 15,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 12),
+        const Text('Gender', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14)),
+        const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(child: _buildGenderCard('Male')),
-            const SizedBox(width: 16),
-            Expanded(child: _buildGenderCard('Female')),
+            _buildGenderOption('Male'),
+            const SizedBox(width: 12),
+            _buildGenderOption('Female'),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildGenderCard(String value) {
-    bool isSelected = _selectedGender == value;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedGender = value;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFE6F2F3) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
-            width: isSelected ? 2 : 1,
+  Widget _buildGenderOption(String gender) {
+    final isSelected = _selectedGender == gender;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedGender = gender),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF008394).withOpacity(0.1) : const Color(0xFFF9F9F9),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isSelected ? const Color(0xFF008394) : Colors.transparent),
           ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              value == 'Male' ? Icons.face : Icons.face_3,
-              size: 40,
-              color: isSelected ? AppColors.primary : AppColors.textPrimary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: TextStyle(
-                color: isSelected ? AppColors.primary : AppColors.textPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+          alignment: Alignment.center,
+          child: Text(gender, style: TextStyle(color: isSelected ? const Color(0xFF008394) : AppColors.textSecondary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
         ),
       ),
     );
   }
 
-  Widget _buildDropdownField(String value, bool showFlag) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildDetailInfoTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
         children: [
-          Row(
-            children: [
-              if (showFlag && value != 'Choose country') ...[
-                Container(
-                  width: 20,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    image: DecorationImage(
-                      image: AssetImage('images/flags/Nation=${_getFlagAssetName(value)}.png'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Text(
-                value,
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.textPrimary),
+          _buildTextField(hintText: 'Experience', controller: _experienceController),
+          const SizedBox(height: 16),
+          _buildTextField(hintText: 'Specialization', controller: _specializationController),
+          const SizedBox(height: 16),
+          _buildTextField(hintText: 'License Number', controller: _licenseNumberController),
+          const SizedBox(height: 16),
+          _buildTextField(hintText: 'Education', controller: _educationController),
         ],
       ),
     );
   }
 
-  void _showSuccessDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEFFFEE),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF05B93E),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check, color: Colors.white, size: 36), // Changed to check icon for visual correctness
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Successfully',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Info doctor was changed successfully.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 32),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.pop(context); // Close dialog
-                    Navigator.pop(context, true); // Close bottom sheet and return true to refresh
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF008394),
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text(
-                      'Ok',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+  Widget _buildSecurityTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          _buildTextField(hintText: 'New Username (Optional)', controller: _usernameController),
+          const SizedBox(height: 16),
+          _buildTextField(hintText: 'New Password (Optional)', controller: _passwordController, isPassword: true),
+        ],
+      ),
     );
   }
 
-  String _getFlagAssetName(String country) {
-    if (country == 'Uzbekistan') return 'uzbekistan';
-    return country.toLowerCase().replaceAll(' ', '_');
-  }
-
-  String _getPhoneCode(String country) {
-    const Map<String, String> phoneCodes = {
-      'Afghanistan': '+93', 'Albania': '+355', 'Algeria': '+213',
-      'Angola': '+244', 'Argentina': '+54', 'Armenia': '+374',
-      'Australia': '+61', 'Austria': '+43', 'Azerbaijan': '+994',
-      'Bahrain': '+973', 'Bangladesh': '+880', 'Belarus': '+375',
-      'Belgium': '+32', 'Bolivia': '+591', 'Bosnia': '+387',
-      'Brazil': '+55', 'Bulgaria': '+359', 'Cambodia': '+855',
-      'Cameroon': '+237', 'Canada': '+1', 'Chile': '+56',
-      'China': '+86', 'Colombia': '+57', 'Croatia': '+385',
-      'Cuba': '+53', 'Cyprus': '+357', 'Czech Republic': '+420',
-      'Denmark': '+45', 'Ecuador': '+593', 'Egypt': '+20',
-      'Ethiopia': '+251', 'Finland': '+358', 'France': '+33',
-      'Georgia': '+995', 'Germany': '+49', 'Ghana': '+233',
-      'Greece': '+30', 'Guatemala': '+502', 'Honduras': '+504',
-      'Hong Kong': '+852', 'Hungary': '+36', 'India': '+91',
-      'Indonesia': '+62', 'Iran': '+98', 'Iraq': '+964',
-      'Ireland': '+353', 'Israel': '+972', 'Italy': '+39',
-      'Jamaica': '+1876', 'Japan': '+81', 'Jordan': '+962',
-      'Kazakhstan': '+7', 'Kenya': '+254', 'Kuwait': '+965',
-      'Kyrgyzstan': '+996', 'Laos': '+856', 'Latvia': '+371',
-      'Lebanon': '+961', 'Libya': '+218', 'Lithuania': '+370',
-      'Luxembourg': '+352', 'Macau': '+853', 'Malaysia': '+60',
-      'Maldives': '+960', 'Mexico': '+52', 'Moldova': '+373',
-      'Mongolia': '+976', 'Morocco': '+212', 'Myanmar': '+95',
-      'Nepal': '+977', 'Netherlands': '+31', 'New Zealand': '+64',
-      'Nigeria': '+234', 'North Korea': '+850', 'Norway': '+47',
-      'Oman': '+968', 'Pakistan': '+92', 'Panama': '+507',
-      'Paraguay': '+595', 'Peru': '+51', 'Philippines': '+63',
-      'Poland': '+48', 'Portugal': '+351', 'Qatar': '+974',
-      'Romania': '+40', 'Russia': '+7', 'Saudi Arabia': '+966',
-      'Serbia': '+381', 'Singapore': '+65', 'Slovakia': '+421',
-      'Slovenia': '+386', 'South Africa': '+27', 'South Korea': '+82',
-      'Spain': '+34', 'Sri Lanka': '+94', 'Sudan': '+249',
-      'Sweden': '+46', 'Switzerland': '+41', 'Syria': '+963',
-      'Taiwan': '+886', 'Tajikistan': '+992', 'Tanzania': '+255',
-      'Thailand': '+66', 'Tunisia': '+216', 'Turkey': '+90',
-      'Turkmenistan': '+993', 'Uganda': '+256', 'Ukraine': '+380',
-      'United Arab Emirates': '+971', 'United Kingdom': '+44',
-      'United States': '+1', 'Uruguay': '+598', 'Uzbekistan': '+998',
-      'Venezuela': '+58', 'Vietnam': '+84', 'Wales': '+44',
-      'Yemen': '+967', 'Zambia': '+260', 'Zimbabwe': '+263',
-    };
-    return phoneCodes[country] ?? '+1';
+  Widget _buildTextField({required String hintText, required TextEditingController controller, bool isPassword = false}) {
+    return TextFormField(
+      controller: controller,
+      obscureText: isPassword,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Color(0xFFA0A5A9), fontSize: 15),
+        filled: true,
+        fillColor: const Color(0xFFF9F9F9),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      ),
+    );
   }
 }

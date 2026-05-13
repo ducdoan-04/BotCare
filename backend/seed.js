@@ -330,6 +330,129 @@ async function main() {
   }
   console.log('Notifications seeded.');
 
+  // 7. Seed Staff
+  const staffMembers = [
+    {
+      id: 's1111111-1111-1111-1111-111111111111',
+      full_name: 'Kathryn Murphy',
+      profile_image_url: 'images/staff/avatar-1.jpg',
+      role: 'Receptionist',
+      shift: '9AM - 2PM',
+      gender: 'Female',
+      email: 'kathry.murp@example.com',
+      phone: '(704) 555-0127',
+      address: '6391 Elgin St. Celina, Delaware 10299',
+      joining_date: new Date('2020-03-15'),
+      professional_summary: 'Kathryn is a highly dedicated receptionist with 4+ years of experience ensuring smooth front-desk operations, patient scheduling.',
+      status: 'Available',
+    },
+    {
+      id: 's2222222-2222-2222-2222-222222222222',
+      full_name: 'Devon Lane',
+      profile_image_url: 'images/staff/avatar-2.jpg',
+      role: 'Pharmacist',
+      shift: '9AM - 2PM',
+      gender: 'Male',
+      email: 'devon.lane@example.com',
+      phone: '(201) 555-0123',
+      address: '456 Pharma Rd, NY',
+      joining_date: new Date('2021-06-10'),
+      professional_summary: 'Devon manages the clinic pharmacy with precision and care.',
+      status: 'Available',
+    },
+    {
+      id: 's3333333-3333-3333-3333-333333333333',
+      full_name: 'Marvin McKinney',
+      profile_image_url: 'images/staff/avatar-3.jpg',
+      role: 'Receptionist',
+      shift: '9AM - 2PM',
+      gender: 'Female',
+      email: 'marvin.mck@example.com',
+      phone: '(302) 555-0111',
+      address: '789 Lobby Way, CA',
+      joining_date: new Date('2022-01-05'),
+      professional_summary: 'Marvin specializes in patient intake and insurance verification.',
+      status: 'Available',
+    },
+    {
+      id: 's4444444-4444-4444-4444-444444444444',
+      full_name: 'Ronald Richards',
+      profile_image_url: 'images/staff/avatar-4.jpg',
+      role: 'Accountant',
+      shift: '9AM - 2PM',
+      gender: 'Male',
+      email: 'ronald.rich@example.com',
+      phone: '(405) 555-0199',
+      address: '101 Finance St, TX',
+      joining_date: new Date('2019-11-20'),
+      professional_summary: 'Ronald manages the clinic financials and billing systems.',
+      status: 'Available',
+    },
+    {
+      id: 's5555555-5555-5555-5555-555555555555',
+      full_name: 'Robert Fox',
+      profile_image_url: 'images/staff/avatar-5.jpg',
+      role: 'Nurse',
+      shift: '9AM - 2PM',
+      gender: 'Male',
+      email: 'robert.fox@example.com',
+      phone: '(505) 555-0188',
+      address: '202 Care Blvd, FL',
+      joining_date: new Date('2023-02-14'),
+      professional_summary: 'Robert provides expert nursing care in the general ward.',
+      status: 'Available',
+    },
+  ];
+
+  for (const s of staffMembers) {
+    await prisma.staff.upsert({
+      where: { id: s.id },
+      update: s,
+      create: s,
+    });
+  }
+  console.log('Staff seeded.');
+
+  // 8. Seed Staff Tasks (Today Tasks for Kathryn)
+  const kathrynTasks = [
+    {
+      staff_id: 's1111111-1111-1111-1111-111111111111',
+      task_title: 'Morning check-in & patient queue',
+      task_description: 'Greet patients, log arrivals, prepare forms',
+      start_time: '09:00 AM',
+      end_time: '10:00 AM',
+      date: today,
+    },
+    {
+      staff_id: 's1111111-1111-1111-1111-111111111111',
+      task_title: 'Front desk operations',
+      task_description: 'Handle calls, manage bookings, assist walk-ins',
+      start_time: '10:00 AM',
+      end_time: '12:00 AM',
+      date: today,
+    },
+  ];
+
+  for (const t of kathrynTasks) {
+    await prisma.staffTask.create({ data: t });
+  }
+  console.log('Staff tasks seeded.');
+
+  // 9. Seed Staff Attendance (Heatmap for Kathryn)
+  // Create attendance for the last 30 days
+  for (let i = 0; i < 35; i++) {
+    const date = new Date();
+    date.setDate(today.getDate() - i);
+    await prisma.staffAttendance.create({
+      data: {
+        staff_id: 's1111111-1111-1111-1111-111111111111',
+        date: date,
+        attendance_level: Math.floor(Math.random() * 4), // 0 to 3
+      },
+    });
+  }
+  console.log('Staff attendance seeded.');
+
   console.log('Database seeded successfully!');
 }
 

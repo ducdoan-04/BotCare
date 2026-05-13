@@ -1,12 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { generateTokens } = require('../utils/jwt.util');
 
 const prisma = new PrismaClient();
 
 class AuthService {
   async register(data) {
-    const { email, password, full_name } = data;
+    const { email, password } = data;
+    const full_name = data.full_name || data.fullName;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -19,8 +20,11 @@ class AuthService {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
+    const username = email.split('@')[0] + '_' + Math.floor(Math.random() * 1000);
+
     const user = await prisma.user.create({
       data: {
+        username,
         email,
         password_hash,
         full_name,

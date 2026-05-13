@@ -121,7 +121,7 @@ class PatientRepository {
   Future<bool> updatePatient(String id, Map<String, dynamic> data, {Uint8List? avatarBytes}) async {
     try {
       final token = await StorageService.read('accessToken');
-      var request = http.MultipartRequest('PUT', Uri.parse('http://192.168.1.8:3000/api/v1/patients/$id'));
+      var request = http.MultipartRequest('PUT', Uri.parse('$baseUrl/$id'));
       
       request.headers.addAll({
         'Authorization': 'Bearer $token',
@@ -158,6 +158,29 @@ class PatientRepository {
       }
     } catch (e) {
       print('Error updating patient: $e');
+      rethrow;
+    }
+  }
+
+  // DELETE /api/v1/patients/:id
+  Future<bool> deletePatient(String id) async {
+    try {
+      final token = await StorageService.read('accessToken');
+      final response = await http.delete(
+        Uri.parse('$baseUrl/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final resData = jsonDecode(response.body);
+        throw Exception(resData['error'] ?? 'Delete patient failed');
+      }
+    } catch (e) {
+      print('Error deleting patient: $e');
       rethrow;
     }
   }

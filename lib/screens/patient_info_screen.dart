@@ -136,19 +136,23 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (context) => UpdatePatientSheet(
-                              patient: widget.patient,
-                              onSave: (updated) {
-                                // Real app would manage state globally
-                                Navigator.pop(context);
-                              },
+                        onTap: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PatientFormScreen(
+                                existingPatient: Patient.fromJson({
+                                  ...widget.patient,
+                                  'id': widget.patient['id'] ?? 'temp-id',
+                                  'full_name': widget.patient['name'],
+                                }),
+                              ),
                             ),
                           );
+                          if (result == true) {
+                            // In a real app, you'd refresh the whole screen data
+                            Navigator.pop(context, true); 
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),

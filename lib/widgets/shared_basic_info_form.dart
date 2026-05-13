@@ -14,6 +14,7 @@ class SharedBasicInfoForm extends StatelessWidget {
   
   final Uint8List? avatarBytes;
   final String? avatarPath;
+  final String? profileImageUrl; // Added for Update mode
   final String? country;
   final String? stateName;
   
@@ -35,6 +36,7 @@ class SharedBasicInfoForm extends StatelessWidget {
     required this.cityController,
     this.avatarBytes,
     this.avatarPath,
+    this.profileImageUrl,
     this.country,
     this.stateName,
     required this.onPickAvatar,
@@ -65,9 +67,15 @@ class SharedBasicInfoForm extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: avatarBytes != null
                   ? Image.memory(avatarBytes!, fit: BoxFit.cover)
-                  : (avatarPath != null && !kIsWeb
-                      ? Image.asset(avatarPath!, fit: BoxFit.cover)
-                      : const Icon(Icons.person, size: 40, color: Color(0xFF008394))),
+                  : (profileImageUrl != null
+                      ? Image.network(
+                          'http://${kIsWeb ? Uri.base.host : '192.168.1.8'}:3000/$profileImageUrl',
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, size: 40, color: Color(0xFF008394)),
+                        )
+                      : (avatarPath != null && !kIsWeb
+                          ? Image.asset(avatarPath!, fit: BoxFit.cover)
+                          : const Icon(Icons.person, size: 40, color: Color(0xFF008394)))),
             ),
             const SizedBox(width: 16),
             Column(

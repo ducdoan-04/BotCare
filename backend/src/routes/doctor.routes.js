@@ -42,7 +42,7 @@ const router = express.Router();
 router.get('/', authMiddleware, doctorController.getDoctors);
 router.post('/', authMiddleware, upload.single('profile_image'), doctorController.createDoctor);
 router.get('/:id', authMiddleware, doctorController.getDoctorById);
-router.put('/:id', authMiddleware, doctorController.updateDoctor);
+router.put('/:id', authMiddleware, upload.single('profile_image'), doctorController.updateDoctor);
 router.delete('/:id', authMiddleware, doctorController.deleteDoctor);
 router.get('/:id/timetable', authMiddleware, doctorController.getDoctorTimetable);
 
