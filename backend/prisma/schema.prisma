@@ -9,33 +9,38 @@ generator client {
 
 model User {
   id            String   @id @default(uuid())
+  username      String   @unique
   email         String   @unique
   password_hash String
   full_name     String?
+  role          String   @default("DOCTOR") // "ADMIN", "RECEPTIONIST", "DOCTOR"
   created_at    DateTime @default(now())
+  doctor        Doctor?  @relation("UserDoctor")
 
   @@map("users")
 }
 
 model Doctor {
   id                         String             @id @default(uuid())
+  user_id                    String?            @unique  // FK to User account (optional for legacy doctors)
   full_name                  String
   profile_image_url          String?
   gender                     String?
   email                      String?
   phone_number               String?
   address                    String?
-  specialization             String?            // "General Practitioner", "Cardiology", "Dermatology", etc.
-  experience                 String?            // e.g. "10+ Years"
-  education                  String?
-  license_number             String?
-  status                     String             @default("Available") // "Available", "Away", etc.
+  specialization             String?            // Department: "Cardiology", "Neurology", etc.
+  experience                 String?            // e.g. "5 years"
+  education                  String?            // Qualification: "MBBS", "MD", etc.
+  license_number             String?            // Required legal field
+  status                     String             @default("Available")
   working_hours              String?            @default("9AM - 2PM")
   rating                     Float              @default(0.0)
   total_reviews              Int                @default(0)
   total_patients             Int                @default(0)
   surgeries                  Int                @default(0)
   patients_increase_percent  Float              @default(0.0)
+  user                       User?              @relation("UserDoctor", fields: [user_id], references: [id], onDelete: SetNull)
   appointments               Appointment[]
   availability_slots         AvailabilitySlot[]
 

@@ -47,3 +47,4 @@ app.*.map.json
 # Backend node dependencies and environment variables
 backend/node_modules/
 backend/.env
+backend/public/uploads/

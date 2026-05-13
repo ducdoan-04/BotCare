@@ -73,14 +73,13 @@ class DoctorController {
     }
   }
 
-  // POST /api/v1/doctors (Supports multipart/form-data with transaction rollback file cleanup)
+  // POST /api/v1/doctors
   async createDoctor(req, res) {
     let uploadedFilePath = null;
 
     try {
       const {
         full_name,
-        profile_image_url,
         gender,
         email,
         phone_number,
@@ -96,49 +95,80 @@ class DoctorController {
         total_patients,
         surgeries,
         patients_increase_percent,
+        username,
+        password,
       } = req.body;
 
+      // ── 1. Basic validation BEFORE touching the file system ──────────────
       if (!full_name) {
-        // If file was uploaded by multer but form-validation failed, clean it immediately
-        if (req.file) {
-          try {
-            fs.unlinkSync(req.file.path);
-          } catch (e) {
-            console.error('File cleanup error:', e);
-          }
-        }
-        return res.status(400).json({
-          success: false,
-          error: 'Full name is required',
-        });
+        if (req.file) fs.unlinkSync(req.file.path);
+        return res.status(400).json({ success: false, error: 'Full name is required' });
       }
 
-      // If multer received a file, store its path and construct its public URL
-      let finalProfileImageUrl = profile_image_url || 'images/doctors/default.jpg';
+      // ── 2. Uniqueness checks (username + email) — BEFORE uploading file ──
+      if (username) {
+        const existingUser = await prisma.user.findUnique({ where: { username: username.trim() } });
+        if (existingUser) {
+          if (req.file) fs.unlinkSync(req.file.path);
+          return res.status(409).json({ success: false, error: `Username "${username}" is already taken. Please choose another.` });
+        }
+      }
+
+      if (email) {
+        const existingEmail = await prisma.user.findFirst({ where: { email: email.trim() } });
+        if (existingEmail) {
+          if (req.file) fs.unlinkSync(req.file.path);
+          return res.status(409).json({ success: false, error: `Email "${email}" is already registered to another account.` });
+        }
+      }
+
+      // ── 3. Determine profile image URL ───────────────────────────────────
+      let finalProfileImageUrl = 'images/doctors/default.jpg';
       if (req.file) {
         uploadedFilePath = req.file.path;
-        // Construct standard relative URL served statically via Express
         finalProfileImageUrl = `uploads/${req.file.filename}`;
       }
 
-      // Execute entire Doctor creation and default availability slots inside a single atomic Database Transaction!
+      // ── 4. Hash password with bcrypt ─────────────────────────────────────
+      let passwordHash = null;
+      if (username && password) {
+        const bcrypt = require('bcryptjs');
+        passwordHash = await bcrypt.hash(password, 12);
+      }
+
+      // ── 5. Atomic DB Transaction: create User + Doctor + AvailabilitySlots
       const newDoctor = await prisma.$transaction(async (tx) => {
-        // Create the doctor record
+        // 5a. Create User account (if username + password provided)
+        let newUser = null;
+        if (username && passwordHash) {
+          newUser = await tx.user.create({
+            data: {
+              username: username.trim(),
+              email: email ? email.trim() : `${username.trim()}@carebot.local`,
+              password_hash: passwordHash,
+              full_name: full_name.trim(),
+              role: 'DOCTOR',
+            },
+          });
+        }
+
+        // 5b. Create Doctor profile
         const created = await tx.doctor.create({
           data: {
-            full_name,
+            user_id: newUser ? newUser.id : null,
+            full_name: full_name.trim(),
             profile_image_url: finalProfileImageUrl,
             gender: gender || 'Male',
             email: email || '',
             phone_number: phone_number || '',
             address: address || '',
-            specialization: specialization || 'General Practitioner',
-            experience: experience || '1+ Years',
-            education: education || 'Medical Degree',
+            specialization: specialization || 'General Practice',
+            experience: experience || '',
+            education: education || 'MBBS',
             license_number: license_number || '',
             status: status || 'Available',
             working_hours: working_hours || '9AM - 2PM',
-            rating: rating ? parseFloat(rating) : 4.5,
+            rating: rating ? parseFloat(rating) : 0.0,
             total_reviews: total_reviews ? parseInt(total_reviews) : 0,
             total_patients: total_patients ? parseInt(total_patients) : 0,
             surgeries: surgeries ? parseInt(surgeries) : 0,
@@ -146,24 +176,17 @@ class DoctorController {
           },
         });
 
-        // Auto-generate default availability slots inside transaction
+        // 5c. Auto-generate default availability slots
         const defaultSlots = [
-          '09.00:AM',
-          '09.30:AM',
-          '10.00:AM',
-          '10.30:AM',
-          '11.30:AM',
-          '12.00:PM',
-          '02.00:PM',
-          '02.30:PM',
+          '09.00:AM', '09.30:AM', '10.00:AM', '10.30:AM',
+          '11.30:AM', '12.00:PM', '02.00:PM', '02.30:PM',
         ];
-
         for (const slot of defaultSlots) {
           await tx.availabilitySlot.create({
             data: {
               doctor_id: created.id,
               time_slot: slot,
-              is_booked: slot === '09.00:AM' || slot === '12.00:PM', // mock some initial booked slots
+              is_booked: false,
             },
           });
         }
@@ -171,30 +194,32 @@ class DoctorController {
         return created;
       });
 
-      return res.status(201).json({
-        success: true,
-        data: newDoctor,
-      });
+      // ── 6. NEVER return password_hash in response ─────────────────────────
+      return res.status(201).json({ success: true, data: newDoctor });
 
     } catch (error) {
       console.error('Error in transactional createDoctor:', error);
 
-      // ROLLBACK FILE SYSTEM: If database transaction failed, delete the newly uploaded file to avoid storage garbage!
+      // ROLLBACK FILE SYSTEM: delete uploaded avatar if DB transaction failed
       if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
         try {
           fs.unlinkSync(uploadedFilePath);
-          console.log(`Cleaned up garbage file successfully on rollback: ${uploadedFilePath}`);
+          console.log(`Cleaned up orphaned upload on rollback: ${uploadedFilePath}`);
         } catch (unlinkErr) {
-          console.error('Failed to delete garbage file on rollback:', unlinkErr);
+          console.error('Failed to clean up file on rollback:', unlinkErr);
         }
       }
 
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to create new doctor in database',
-      });
+      // Handle Prisma unique constraint errors gracefully
+      if (error.code === 'P2002') {
+        const field = error.meta?.target?.[0] || 'field';
+        return res.status(409).json({ success: false, error: `${field} already exists. Please use a different value.` });
+      }
+
+      return res.status(500).json({ success: false, error: 'Failed to create new doctor. Please try again.' });
     }
   }
+
 
   // PUT /api/v1/doctors/:id
   async updateDoctor(req, res) {

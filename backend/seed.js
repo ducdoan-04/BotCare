@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
@@ -15,9 +15,11 @@ async function main() {
     const password_hash = await bcrypt.hash(password, salt);
     await prisma.user.create({
       data: {
+        username: 'nola_hawkins',
         email,
         password_hash,
         full_name: 'Nola Hawkins',
+        role: 'RECEPTIONIST',
       },
     });
     console.log(`Created default user: ${email} / ${password}`);

@@ -235,17 +235,8 @@ class DoctorRepository {
         throw Exception('Server returned status: ${response.statusCode}');
       }
     } catch (e) {
-      // Graceful fallback to Mock data on network failure to guarantee no visual crashes
-      print('Network error, falling back to mock doctors: $e');
-      return _mockDoctors.where((doc) {
-        final matchesSearch = search == null || 
-            search.isEmpty || 
-            doc.fullName.toLowerCase().contains(search.toLowerCase());
-        final matchesSpecialty = specialty == null || 
-            specialty.toLowerCase() == 'all' || 
-            doc.specialization?.toLowerCase() == specialty.toLowerCase();
-        return matchesSearch && matchesSpecialty;
-      }).toList();
+      print('Network error fetching doctors: $e');
+      rethrow;
     }
   }
 
@@ -280,11 +271,8 @@ class DoctorRepository {
         throw Exception('Server returned status: ${response.statusCode}');
       }
     } catch (e) {
-      print('Network error, falling back to mock doctor: $e');
-      return _mockDoctors.firstWhere(
-        (doc) => doc.id == id,
-        orElse: () => _mockDoctors[0],
-      );
+      print('Network error fetching doctor by id: $e');
+      rethrow;
     }
   }
 
@@ -365,7 +353,13 @@ class DoctorRepository {
   }
 
   // POST multipart/form-data for doctor registration with profile image
-  Future<Doctor> createDoctorMultipart(Doctor doctor, String? avatarPath, Uint8List? avatarBytes) async {
+  Future<Doctor> createDoctorMultipart(
+    Doctor doctor,
+    String? avatarPath,
+    Uint8List? avatarBytes, {
+    String username = '',
+    String password = '',
+  }) async {
     if (useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
       final newDoctor = Doctor(
@@ -401,15 +395,15 @@ class DoctorRepository {
         'Authorization': 'Bearer $token',
       });
 
-      // Bind fields
+      // Bind doctor fields
       request.fields['full_name'] = doctor.fullName;
       request.fields['gender'] = doctor.gender ?? 'Male';
       request.fields['email'] = doctor.email ?? '';
       request.fields['phone_number'] = doctor.phoneNumber ?? '';
       request.fields['address'] = doctor.address ?? '';
       request.fields['specialization'] = doctor.specialization ?? '';
-      request.fields['experience'] = doctor.experience ?? '5+ Years';
-      request.fields['education'] = doctor.education ?? 'MD degree';
+      request.fields['experience'] = doctor.experience ?? '';
+      request.fields['education'] = doctor.education ?? 'MBBS';
       request.fields['license_number'] = doctor.licenseNumber ?? '';
       request.fields['working_hours'] = doctor.workingHours;
       request.fields['status'] = doctor.status;
@@ -418,6 +412,10 @@ class DoctorRepository {
       request.fields['total_patients'] = doctor.totalPatients.toString();
       request.fields['surgeries'] = doctor.surgeries.toString();
       request.fields['patients_increase_percent'] = doctor.patientsIncreasePercent.toString();
+
+      // Bind Step 3 Security fields for account creation
+      if (username.isNotEmpty) request.fields['username'] = username;
+      if (password.isNotEmpty) request.fields['password'] = password;
 
       // Bind avatar file if present
       if (kIsWeb && avatarBytes != null) {
@@ -447,6 +445,12 @@ class DoctorRepository {
         await StorageService.clear();
         throw Exception('401 Unauthorized. Your token expired. Please hit F5 (refresh page) to login again!');
       } else {
+        try {
+          final resData = jsonDecode(response.body);
+          if (resData != null && resData['error'] != null) {
+            throw Exception(resData['error']);
+          }
+        } catch (_) {}
         throw Exception('Server returned status: ${response.statusCode}');
       }
     } catch (e) {

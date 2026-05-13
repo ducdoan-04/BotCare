@@ -12,8 +12,7 @@ import '../repositories/doctor_repository.dart';
 import '../providers/add_doctor_provider.dart';
 import 'select_country_screen.dart';
 import 'select_state_screen.dart';
-import 'select_department_screen.dart';
-import 'select_qualification_screen.dart';
+
 
 class AddDoctorScreen extends StatefulWidget {
   const AddDoctorScreen({super.key});
@@ -38,6 +37,11 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
   final _specializationController = TextEditingController();
   final _licenseNumberController = TextEditingController();
 
+  // Step 3 Controllers
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _repeatPasswordController = TextEditingController();
+
   int _currentStep = 0; // 0: Basic Info, 1: Detail Info, 2: Security
   bool _obscurePassword = true;
   bool _obscureRepeatPassword = true;
@@ -58,6 +62,9 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
       _experienceController.text = provider.state.experience;
       _specializationController.text = provider.state.specialization ?? '';
       _licenseNumberController.text = provider.state.licenseNumber;
+      _usernameController.text = provider.state.username;
+      _passwordController.text = provider.state.password;
+      _repeatPasswordController.text = provider.state.repeatPassword;
     });
   }
 
@@ -72,6 +79,10 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
     _experienceController.dispose();
     _specializationController.dispose();
     _licenseNumberController.dispose();
+
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _repeatPasswordController.dispose();
     super.dispose();
   }
 
@@ -116,66 +127,72 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
     }
   }
 
-  // Final Step Form Submission
+  // Final Step Form Submission — called ONLY ONCE on "Save" at Step 3
   Future<void> _submitDoctor(AddDoctorProvider provider) async {
-    if (provider.state.fullName.trim().isEmpty) {
+    // Final security validation before submit
+    final isSecurityValid = provider.validateSecurity((errorMsg) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter full name'), backgroundColor: AppColors.error),
+        SnackBar(content: Text(errorMsg), backgroundColor: AppColors.error),
       );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
     });
+    if (!isSecurityValid) return;
+
+    setState(() => _isSaving = true);
 
     try {
       final docToCreate = Doctor(
         id: '',
         fullName: provider.state.fullName.trim(),
-        profileImageUrl: null, // Server will upload and return URL
+        profileImageUrl: null,
         gender: provider.state.gender,
-        email: provider.state.email.trim().isNotEmpty ? provider.state.email.trim() : 'doctor@carebot.com',
-        phoneNumber: provider.state.phoneNumber.trim().isNotEmpty ? provider.state.phoneNumber.trim() : '+1 (555) 019-9028',
-        address: '${provider.state.address.trim()}, ${provider.state.city.trim()}, ${provider.state.state ?? ""}, ${provider.state.country ?? ""}',
-        specialization: provider.state.specialization?.trim().isNotEmpty == true
-            ? provider.state.specialization!.trim()
-            : 'General Practitioner',
-        experience: provider.state.experience.trim().isNotEmpty ? provider.state.experience.trim() : '5+ Years',
+        email: provider.state.email.trim().isNotEmpty
+            ? provider.state.email.trim()
+            : null,
+        phoneNumber: provider.state.phoneNumber.trim().isNotEmpty
+            ? provider.state.phoneNumber.trim()
+            : null,
+        address: [
+          provider.state.address.trim(),
+          provider.state.city.trim(),
+          provider.state.state ?? '',
+          provider.state.country ?? '',
+        ].where((s) => s.isNotEmpty).join(', '),
+        specialization: provider.state.specialization?.trim() ?? 'General Practice',
+        experience: provider.state.experience.trim(),
         education: provider.state.education,
-        licenseNumber: provider.state.licenseNumber.trim().isNotEmpty ? provider.state.licenseNumber.trim() : 'LIC-102938',
+        licenseNumber: provider.state.licenseNumber.trim(),
         status: 'Available',
         workingHours: provider.state.workingHours,
-        rating: 4.8,
-        totalReviews: 120,
-        totalPatients: 230,
-        surgeries: 90,
-        patientsIncreasePercent: 3.5,
+        rating: 0.0,
+        totalReviews: 0,
+        totalPatients: 0,
+        surgeries: 0,
+        patientsIncreasePercent: 0.0,
       );
 
-      // Call API ĐÚNG MỘT LẦN ở bước cuối cùng với Multipart Request
+      // Single API call with all data + avatar bytes
       await _repository.createDoctorMultipart(
         docToCreate,
         provider.state.avatarPath,
         provider.state.avatarBytes,
+        username: provider.state.username.trim(),
+        password: provider.state.password,
       );
 
-      // Reset local multi-step state on successful server create
       provider.reset();
 
       if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
+        setState(() => _isSaving = false);
         _showSuccessDialog();
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
+        setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding doctor: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -496,57 +513,49 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                       ] else if (_currentStep == 1) ...[
                         // =================== STEP 2: DETAIL INFO ===================
                         const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () async {
-                            final result = await showModalBottomSheet<String>(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => const SelectDepartmentScreen(
-                                initialSelection: 'General Practitioner',
-                              ),
-                            );
-                            if (result != null) {
-                              provider.setSpecialization(result);
-                              _specializationController.text = result;
-                            }
+
+                        // Choose Department
+                        _buildInlineDropdown(
+                          hint: provider.state.specialization ?? 'Choose department',
+                          isSelected: provider.state.specialization != null,
+                          items: DoctorDepartments.all,
+                          onSelected: (val) {
+                            provider.setSpecialization(val);
                           },
-                          child: _buildDropdownField(
-                            provider.state.specialization ?? 'Select department',
-                            false,
-                            isSelected: provider.state.specialization != null,
-                          ),
                         ),
                         const SizedBox(height: 16),
+
+                        // Choose Qualification
+                        _buildInlineDropdown(
+                          hint: provider.state.education,
+                          isSelected: true,
+                          items: DoctorQualifications.all,
+                          onSelected: (val) {
+                            provider.setEducation(val);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Experience
                         _buildTextField(
-                          hintText: 'Experience (e.g. 10+ Years)',
+                          hintText: 'Experience (e.g. 5 years)',
                           controller: _experienceController,
                           onChanged: provider.setExperience,
+                          keyboardType: TextInputType.text,
                         ),
                         const SizedBox(height: 16),
-                        GestureDetector(
-                          onTap: () async {
-                            final result = await showModalBottomSheet<String>(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => const SelectQualificationScreen(
-                                initialSelection: 'MD degree',
-                              ),
-                            );
-                            if (result != null) {
-                              provider.setEducation(result);
-                            }
-                          },
-                          child: _buildDropdownField(
-                            provider.state.education,
-                            false,
-                            isSelected: true,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
+
+                        // Specialization / sub-specialty label
                         _buildTextField(
-                          hintText: 'License number',
+                          hintText: 'Specialization (e.g. Neurologist)',
+                          controller: _specializationController,
+                          onChanged: (v) {}, // display-only mirror, dept is source of truth
+                        ),
+                        const SizedBox(height: 16),
+
+                        // License Number — required legal field
+                        _buildTextField(
+                          hintText: 'License number *',
                           controller: _licenseNumberController,
                           onChanged: provider.setLicenseNumber,
                         ),
@@ -555,27 +564,76 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                       ] else if (_currentStep == 2) ...[
                         // =================== STEP 3: SECURITY ===================
                         const SizedBox(height: 16),
+
+                        // Username
+                        _buildTextField(
+                          hintText: 'Enter username',
+                          controller: _usernameController,
+                          onChanged: provider.setUsername,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Password
                         _buildPasswordField(
-                          hintText: 'Create password',
+                          hintText: 'Enter password',
+                          controller: _passwordController,
                           obscureText: _obscurePassword,
                           onToggleVisibility: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
+                            setState(() => _obscurePassword = !_obscurePassword);
                           },
-                          onChanged: provider.setPassword,
+                          onChanged: (v) {
+                            provider.setPassword(v);
+                            setState(() {}); // trigger border color rebuild
+                          },
+                          hasError: false,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+
+                        // Repeat Password — real-time match indicator
                         _buildPasswordField(
                           hintText: 'Repeat password',
+                          controller: _repeatPasswordController,
                           obscureText: _obscureRepeatPassword,
                           onToggleVisibility: () {
-                            setState(() {
-                              _obscureRepeatPassword = !_obscureRepeatPassword;
-                            });
+                            setState(() => _obscureRepeatPassword = !_obscureRepeatPassword);
                           },
-                          onChanged: provider.setRepeatPassword,
+                          onChanged: (v) {
+                            provider.setRepeatPassword(v);
+                            setState(() {}); // trigger border color rebuild
+                          },
+                          hasError: provider.state.repeatPassword.isNotEmpty &&
+                              !provider.passwordsMatch,
                         ),
+
+                        // Password match hint
+                        if (provider.state.repeatPassword.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                provider.passwordsMatch
+                                    ? Icons.check_circle_outline
+                                    : Icons.error_outline,
+                                size: 16,
+                                color: provider.passwordsMatch
+                                    ? const Color(0xFF05B93E)
+                                    : AppColors.error,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                provider.passwordsMatch
+                                    ? 'Passwords match'
+                                    : 'Passwords do not match',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: provider.passwordsMatch
+                                      ? const Color(0xFF05B93E)
+                                      : AppColors.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 40),
                       ],
                     ],
@@ -635,7 +693,16 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                                 setState(() => _currentStep = 1);
                               }
                             } else if (_currentStep == 1) {
-                              setState(() => _currentStep = 2);
+                              // Validate Step 2 before proceeding
+                              final isValid = provider.validateDetailInfo((errorMsg) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(errorMsg),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              });
+                              if (isValid) setState(() => _currentStep = 2);
                             } else {
                               _submitDoctor(provider);
                             }
@@ -648,7 +715,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              _currentStep < 2 ? 'Continue' : 'Create',
+                              _currentStep < 2 ? 'Continue' : 'Save',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -830,11 +897,18 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
 
   Widget _buildPasswordField({
     required String hintText,
+    required TextEditingController controller,
     required bool obscureText,
     required VoidCallback onToggleVisibility,
     required ValueChanged<String> onChanged,
+    bool hasError = false,
   }) {
+    final errorBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+    );
     return TextFormField(
+      controller: controller,
       obscureText: obscureText,
       onChanged: onChanged,
       decoration: InputDecoration(
@@ -845,17 +919,17 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
           fontSize: 15,
         ),
         filled: true,
-        fillColor: const Color(0xFFF9F9F9),
+        fillColor: hasError ? const Color(0xFFFFF0F0) : const Color(0xFFF9F9F9),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        enabledBorder: OutlineInputBorder(
+        enabledBorder: hasError ? errorBorder : OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: hasError ? errorBorder : OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
@@ -866,6 +940,47 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
             color: const Color(0xFFA0A5A9),
           ),
           splashRadius: 20,
+        ),
+      ),
+    );
+  }
+
+  /// Inline dropdown using Flutter's built-in DropdownButton — no extra bottom sheet needed
+  Widget _buildInlineDropdown({
+    required String hint,
+    required bool isSelected,
+    required List<String> items,
+    required ValueChanged<String> onSelected,
+  }) {
+    final String? currentValue = isSelected ? hint : null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: currentValue,
+          hint: Text(
+            hint,
+            style: TextStyle(
+              color: isSelected ? AppColors.textPrimary : const Color(0xFFA0A5A9),
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+            ),
+          ),
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textPrimary, size: 20),
+          borderRadius: BorderRadius.circular(16),
+          items: items.map((item) => DropdownMenuItem<String>(
+            value: item,
+            child: Text(item, style: const TextStyle(fontSize: 15, color: AppColors.textPrimary)),
+          )).toList(),
+          onChanged: (val) {
+            if (val != null) onSelected(val);
+          },
         ),
       ),
     );
