@@ -1,5 +1,15 @@
+import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../theme/app_colors.dart';
+import '../models/doctor_model.dart';
+import '../repositories/doctor_repository.dart';
+import '../providers/add_doctor_provider.dart';
 import 'select_country_screen.dart';
 import 'select_state_screen.dart';
 import 'select_department_screen.dart';
@@ -13,410 +23,659 @@ class AddDoctorScreen extends StatefulWidget {
 }
 
 class _AddDoctorScreenState extends State<AddDoctorScreen> {
+  final _repository = DoctorRepository();
+  final _imagePicker = ImagePicker();
+
+  // Step 1 Controllers
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _cityController = TextEditingController();
+
+  // Step 2 Controllers
+  final _experienceController = TextEditingController();
+  final _specializationController = TextEditingController();
+  final _licenseNumberController = TextEditingController();
+
   int _currentStep = 0; // 0: Basic Info, 1: Detail Info, 2: Security
-  String? _selectedCountry;
-  String? _selectedState;
-  String? _selectedDepartment;
-  String? _selectedQualification;
-  String _selectedPhoneCountry = 'United States';
-  String _selectedGender = 'Male';
   bool _obscurePassword = true;
   bool _obscureRepeatPassword = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Populate form controller values from local provider state to RETAIN STATE when opening or navigating
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<AddDoctorProvider>(context, listen: false);
+      _fullNameController.text = provider.state.fullName;
+      _emailController.text = provider.state.email;
+      _phoneController.text = provider.state.phoneNumber;
+      _addressController.text = provider.state.address;
+      _cityController.text = provider.state.city;
+
+      _experienceController.text = provider.state.experience;
+      _specializationController.text = provider.state.specialization ?? '';
+      _licenseNumberController.text = provider.state.licenseNumber;
+    });
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+
+    _experienceController.dispose();
+    _specializationController.dispose();
+    _licenseNumberController.dispose();
+    super.dispose();
+  }
+
+  // Handle Avatar image picking with size validation
+  Future<void> _pickAvatar(AddDoctorProvider provider) async {
+    try {
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        final sizeInBytes = bytes.length;
+
+        // Size check: Limit is 5 MB
+        if (sizeInBytes > 5 * 1024 * 1024) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Error: Avatar image size must be less than 5 MB'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Save local state inside provider (NO server upload yet!)
+        provider.setAvatar(
+          path: kIsWeb ? null : pickedFile.path,
+          bytes: bytes,
+          size: sizeInBytes,
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e'), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
+  // Final Step Form Submission
+  Future<void> _submitDoctor(AddDoctorProvider provider) async {
+    if (provider.state.fullName.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter full name'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final docToCreate = Doctor(
+        id: '',
+        fullName: provider.state.fullName.trim(),
+        profileImageUrl: null, // Server will upload and return URL
+        gender: provider.state.gender,
+        email: provider.state.email.trim().isNotEmpty ? provider.state.email.trim() : 'doctor@carebot.com',
+        phoneNumber: provider.state.phoneNumber.trim().isNotEmpty ? provider.state.phoneNumber.trim() : '+1 (555) 019-9028',
+        address: '${provider.state.address.trim()}, ${provider.state.city.trim()}, ${provider.state.state ?? ""}, ${provider.state.country ?? ""}',
+        specialization: provider.state.specialization?.trim().isNotEmpty == true
+            ? provider.state.specialization!.trim()
+            : 'General Practitioner',
+        experience: provider.state.experience.trim().isNotEmpty ? provider.state.experience.trim() : '5+ Years',
+        education: provider.state.education,
+        licenseNumber: provider.state.licenseNumber.trim().isNotEmpty ? provider.state.licenseNumber.trim() : 'LIC-102938',
+        status: 'Available',
+        workingHours: provider.state.workingHours,
+        rating: 4.8,
+        totalReviews: 120,
+        totalPatients: 230,
+        surgeries: 90,
+        patientsIncreasePercent: 3.5,
+      );
+
+      // Call API ĐÚNG MỘT LẦN ở bước cuối cùng với Multipart Request
+      await _repository.createDoctorMultipart(
+        docToCreate,
+        provider.state.avatarPath,
+        provider.state.avatarBytes,
+      );
+
+      // Reset local multi-step state on successful server create
+      provider.reset();
+
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        _showSuccessDialog();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding doctor: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(32),
+          ),
+          backgroundColor: const Color(0xFFE9EDEE),
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFE8F5E9),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF00C853),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check, size: 32, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Successfully',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'New doctor was added successfully.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context, true); // Close add doctor screen and notify change
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF008394),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'Ok',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(32),
-          topRight: Radius.circular(32),
-        ),
-      ),
-      child: Column(
-        children: [
-          // --- HEADER ---
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Add new doctor',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close,
-                        size: 20, color: AppColors.textSecondary),
-                  ),
-                ),
-              ],
-            ),
+    final provider = Provider.of<AddDoctorProvider>(context);
+
+    // Sync cascading clear of city TextField if provider cleared it
+    if (provider.state.city.isEmpty && _cityController.text.isNotEmpty) {
+      _cityController.clear();
+    }
+
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(), // Keyboard auto hide when clicking outside
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(32),
+            topRight: Radius.circular(32),
           ),
-          const Divider(color: AppColors.border, height: 1),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // --- BOTTOM SHEET HANDLE ---
+              const SizedBox(height: 12),
+              Container(
+                width: 48,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAECF0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-          // --- CONTENT ---
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- STEPPER ---
-                  _buildStepper(),
-                  const SizedBox(height: 32),
+              // --- TITLE BAR ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Add new doctor',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, color: AppColors.textPrimary),
+                      splashRadius: 20,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Divider(color: AppColors.border, height: 1),
 
-                  // If _currentStep == 0 show Basic Info form
-                  if (_currentStep == 0) ...[
-                    // --- AVATAR UPLOAD ---
-                    Row(
-                      children: [
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color:
-                                const Color(0xFFE6F2F3), // Pale blue background
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'D',
-                            style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF008394),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              // --- STEPPER ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: _buildStepper(),
+              ),
+
+              // --- SCROLLABLE CONTENT BODY ---
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      if (_currentStep == 0) ...[
+                        // =================== STEP 1: BASIC INFO ===================
+                        const SizedBox(height: 8),
+
+                        // --- AVATAR UPLOAD ---
+                        Row(
                           children: [
-                            const Text(
-                              'JPG or PNG, < 5 MB.',
-                              style: TextStyle(
-                                  color: AppColors.textSecondary, fontSize: 13),
-                            ),
-                            const SizedBox(height: 8),
+                            // Avatar Image Circle
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
+                              width: 80,
+                              height: 80,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(24),
-                                border:
-                                    Border.all(color: const Color(0xFF008394)),
+                                color: const Color(0xFFE6F2F3),
+                                borderRadius: BorderRadius.circular(16),
+                                image: provider.state.avatarBytes != null
+                                    ? DecorationImage(
+                                        image: MemoryImage(provider.state.avatarBytes!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
                               ),
-                              child: const Text(
-                                'Upload New Picture',
-                                style: TextStyle(
-                                  color: Color(0xFF008394),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
+                              alignment: Alignment.center,
+                              child: provider.state.avatarBytes == null
+                                  ? const Text(
+                                      'D',
+                                      style: TextStyle(
+                                        fontSize: 40,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF008394),
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 16),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'JPG or PNG, < 5 MB.',
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                 ),
-                              ),
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () => _pickAvatar(provider),
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(color: const Color(0xFF008394)),
+                                    ),
+                                    child: const Text(
+                                      'Upload New Picture',
+                                      style: TextStyle(
+                                        color: Color(0xFF008394),
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                    // --- FORM FIELDS ---
-                    _buildTextField(hintText: 'Enter full name'),
-                    const SizedBox(height: 16),
-                    _buildTextField(hintText: 'Enter email address'),
-                    const SizedBox(height: 16),
-                    _buildPhoneField(hintPhone: 'Input phone number'),
-                    const SizedBox(height: 16),
-                    _buildTextField(hintText: 'Enter address'),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: () async {
-                        final result = await showModalBottomSheet<String>(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => SelectCountryScreen(
-                            initialSelection:
-                                _selectedCountry ?? 'United States',
-                          ),
-                        );
-                        if (result != null) {
-                          setState(() => _selectedCountry = result);
-                        }
-                      },
-                      child: _buildDropdownField(
-                          _selectedCountry ?? 'Choose country', true,
-                          isSelected: _selectedCountry != null),
-                    ),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: () async {
-                        final result = await showModalBottomSheet<String>(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => SelectStateScreen(
-                            initialSelection: _selectedState ?? 'California',
-                          ),
-                        );
-                        if (result != null) {
-                          setState(() => _selectedState = result);
-                        }
-                      },
-                      child: _buildDropdownField(
-                          _selectedState ?? 'Choose state', false,
-                          isSelected: _selectedState != null),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(hintText: 'Enter city'),
-                    const SizedBox(height: 16),
-                    _buildTextField(hintText: 'Enter postal code'),
-                    const SizedBox(height: 24),
-                    _buildGenderSelection(),
-                    const SizedBox(height: 1),
-                  ] else if (_currentStep == 1) ...[
-                    GestureDetector(
-                      onTap: () async {
-                        final result = await showModalBottomSheet<String>(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => SelectDepartmentScreen(
-                            initialSelection: _selectedDepartment,
-                          ),
-                        );
-                        if (result != null) {
-                          setState(() => _selectedDepartment = result);
-                        }
-                      },
-                      child: _buildDropdownField(
-                          _selectedDepartment ?? 'Choose department', false,
-                          isSelected: _selectedDepartment != null),
-                    ),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: () async {
-                        final result = await showModalBottomSheet<String>(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => SelectQualificationScreen(
-                            initialSelection: _selectedQualification,
-                          ),
-                        );
-                        if (result != null) {
-                          setState(() => _selectedQualification = result);
-                        }
-                      },
-                      child: _buildDropdownField(
-                          _selectedQualification ?? 'Choose qualification', false,
-                          isSelected: _selectedQualification != null),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(hintText: 'Enter experience'),
-                    const SizedBox(height: 16),
-                    _buildTextField(hintText: 'Enter specialization'),
-                    const SizedBox(height: 16),
-                    _buildTextField(hintText: 'Enter license number'),
-                    const SizedBox(height: 40),
-                  ] else if (_currentStep == 2) ...[
-                    _buildTextField(hintText: 'Enter username'),
-                    const SizedBox(height: 16),
-                    _buildPasswordField(
-                      hintText: 'Enter password',
-                      obscureText: _obscurePassword,
-                      onToggleVisibility: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildPasswordField(
-                      hintText: 'Repeat password',
-                      obscureText: _obscureRepeatPassword,
-                      onToggleVisibility: () {
-                        setState(() {
-                          _obscureRepeatPassword = !_obscureRepeatPassword;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 40),
-                  ] else ...[
-                    // Placeholder for other steps
-                    Center(
-                        child:
-                            Text('Step ${_currentStep + 1} content goes here')),
-                  ],
-                ],
-              ),
-            ),
-          ),
-
-          // --- FOOTER BUTTONS ---
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      if (_currentStep > 0) {
-                        setState(() => _currentStep--);
-                      } else {
-                        Navigator.pop(context);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: const Color(0xFF008394)),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        _currentStep > 0 ? 'Back' : 'Cancel',
-                        style: const TextStyle(
-                          color: Color(0xFF008394),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                        // --- TEXT FIELDS ---
+                        _buildTextField(
+                          hintText: 'Enter full name',
+                          controller: _fullNameController,
+                          onChanged: provider.setFullName,
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      if (_currentStep < 2) {
-                        setState(() => _currentStep++);
-                      } else {
-                        // Create action
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (BuildContext context) {
-                            return Dialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(32),
-                              ),
-                              backgroundColor: const Color(0xFFE9EDEE),
-                              child: Padding(
-                                padding: const EdgeInsets.all(32.0),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFE8F5E9),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(16),
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFF00C853),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(Icons.check,
-                                            size: 32, color: Colors.white),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    const Text(
-                                      'Successfully',
-                                      style: TextStyle(
-                                        color: AppColors.textPrimary,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    const Text(
-                                      'New doctor was added successfully.',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: AppColors.textSecondary,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 32),
-                                    GestureDetector(
-                                      onTap: () {
-                                        Navigator.pop(context); // Close dialog
-                                        Navigator.pop(context); // Close add doctor screen
-                                      },
-                                      child: Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 16),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF008394),
-                                          borderRadius:
-                                              BorderRadius.circular(30),
-                                        ),
-                                        alignment: Alignment.center,
-                                        child: const Text(
-                                          'Ok',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          hintText: 'Enter email address',
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          onChanged: provider.setEmail,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildPhoneField(
+                          hintPhone: 'Input phone number',
+                          controller: _phoneController,
+                          provider: provider,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          hintText: 'Enter address',
+                          controller: _addressController,
+                          onChanged: provider.setAddress,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // --- SELECT COUNTRY BOTTOM SHEET ---
+                        GestureDetector(
+                          onTap: () async {
+                            final result = await showModalBottomSheet<String>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => SelectCountryScreen(
+                                initialSelection: provider.state.country ?? 'United States',
                               ),
                             );
+                            if (result != null) {
+                              provider.setCountry(result);
+                            }
                           },
-                        );
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF008394),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        _currentStep < 2 ? 'Continue' : 'Create',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          child: _buildDropdownField(
+                            provider.state.country ?? 'Choose country',
+                            true,
+                            isSelected: provider.state.country != null,
+                          ),
                         ),
-                      ),
-                    ),
+                        const SizedBox(height: 16),
+
+                        // --- SELECT STATE BOTTOM SHEET ---
+                        GestureDetector(
+                          onTap: () async {
+                            if (provider.state.country == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please choose a country first'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                              return;
+                            }
+                            final result = await showModalBottomSheet<String>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => SelectStateScreen(
+                                country: provider.state.country!,
+                                initialSelection: provider.state.state ?? '',
+                              ),
+                            );
+                            if (result != null) {
+                              provider.setStateName(result);
+                            }
+                          },
+                          child: _buildDropdownField(
+                            provider.state.state ?? 'Choose state',
+                            false,
+                            isSelected: provider.state.state != null,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // --- ENTER CITY ---
+                        _buildTextField(
+                          hintText: 'Enter city',
+                          controller: _cityController,
+                          onChanged: provider.setCity,
+                        ),
+                        const SizedBox(height: 24),
+                        _buildGenderSelection(provider),
+                        const SizedBox(height: 16),
+
+                      ] else if (_currentStep == 1) ...[
+                        // =================== STEP 2: DETAIL INFO ===================
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () async {
+                            final result = await showModalBottomSheet<String>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => const SelectDepartmentScreen(
+                                initialSelection: 'General Practitioner',
+                              ),
+                            );
+                            if (result != null) {
+                              provider.setSpecialization(result);
+                              _specializationController.text = result;
+                            }
+                          },
+                          child: _buildDropdownField(
+                            provider.state.specialization ?? 'Select department',
+                            false,
+                            isSelected: provider.state.specialization != null,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          hintText: 'Experience (e.g. 10+ Years)',
+                          controller: _experienceController,
+                          onChanged: provider.setExperience,
+                        ),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () async {
+                            final result = await showModalBottomSheet<String>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => const SelectQualificationScreen(
+                                initialSelection: 'MD degree',
+                              ),
+                            );
+                            if (result != null) {
+                              provider.setEducation(result);
+                            }
+                          },
+                          child: _buildDropdownField(
+                            provider.state.education,
+                            false,
+                            isSelected: true,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          hintText: 'License number',
+                          controller: _licenseNumberController,
+                          onChanged: provider.setLicenseNumber,
+                        ),
+                        const SizedBox(height: 40),
+
+                      ] else if (_currentStep == 2) ...[
+                        // =================== STEP 3: SECURITY ===================
+                        const SizedBox(height: 16),
+                        _buildPasswordField(
+                          hintText: 'Create password',
+                          obscureText: _obscurePassword,
+                          onToggleVisibility: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                          onChanged: provider.setPassword,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildPasswordField(
+                          hintText: 'Repeat password',
+                          obscureText: _obscureRepeatPassword,
+                          onToggleVisibility: () {
+                            setState(() {
+                              _obscureRepeatPassword = !_obscureRepeatPassword;
+                            });
+                          },
+                          onChanged: provider.setRepeatPassword,
+                        ),
+                        const SizedBox(height: 40),
+                      ],
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+
+              // --- FOOTER ACTION BUTTONS ---
+              if (!_isSaving)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      // Back / Cancel Button
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            if (_currentStep > 0) {
+                              setState(() => _currentStep--);
+                            } else {
+                              Navigator.pop(context);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(color: const Color(0xFF008394)),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              _currentStep > 0 ? 'Back' : 'Cancel',
+                              style: const TextStyle(
+                                color: Color(0xFF008394),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+
+                      // Continue / Create Button
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            if (_currentStep == 0) {
+                              // Perform validation before moving to Step 2
+                              final isValid = provider.validateBasicInfo((errorMsg) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(errorMsg), backgroundColor: AppColors.error),
+                                );
+                              });
+                              if (isValid) {
+                                setState(() => _currentStep = 1);
+                              }
+                            } else if (_currentStep == 1) {
+                              setState(() => _currentStep = 2);
+                            } else {
+                              _submitDoctor(provider);
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF008394),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              _currentStep < 2 ? 'Continue' : 'Create',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Color(0xFF008394)),
+                  ),
+                ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
+  // --- UI STEPPER INDICATOR ---
   Widget _buildStepper() {
     return Column(
       children: [
@@ -428,11 +687,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                 'Basic Info',
                 textAlign: TextAlign.left,
                 style: TextStyle(
-                  color: _currentStep >= 0
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontWeight:
-                      _currentStep >= 0 ? FontWeight.w500 : FontWeight.normal,
+                  color: _currentStep >= 0 ? AppColors.textPrimary : AppColors.textSecondary,
+                  fontWeight: _currentStep >= 0 ? FontWeight.w500 : FontWeight.normal,
                   fontSize: 13,
                 ),
               ),
@@ -442,11 +698,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                 'Detail Info',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: _currentStep >= 1
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontWeight:
-                      _currentStep >= 1 ? FontWeight.w500 : FontWeight.normal,
+                  color: _currentStep >= 1 ? AppColors.textPrimary : AppColors.textSecondary,
+                  fontWeight: _currentStep >= 1 ? FontWeight.w500 : FontWeight.normal,
                   fontSize: 13,
                 ),
               ),
@@ -456,11 +709,8 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                 'Security',
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                  color: _currentStep >= 2
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontWeight:
-                      _currentStep >= 2 ? FontWeight.w500 : FontWeight.normal,
+                  color: _currentStep >= 2 ? AppColors.textPrimary : AppColors.textSecondary,
+                  fontWeight: _currentStep >= 2 ? FontWeight.w500 : FontWeight.normal,
                   fontSize: 13,
                 ),
               ),
@@ -471,22 +721,18 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         Stack(
           alignment: Alignment.center,
           children: [
-            // Background line
             Container(
               height: 4,
               width: double.infinity,
-              color: const Color(0xFFF2F4F7), // Light grey line
+              color: const Color(0xFFF2F4F7),
             ),
-            // Progress line (if we wanted to fill it)
             Positioned(
               left: 0,
-              top: (24 - 4) / 2, // Centered vertically with dots
+              top: (24 - 4) / 2,
               child: Container(
                 height: 4,
-                width: MediaQuery.of(context).size.width *
-                    (_currentStep / 2) *
-                    0.8, // Approximation
-                color: const Color(0xFF008394), // Teal line
+                width: MediaQuery.of(context).size.width * (_currentStep / 2) * 0.8,
+                color: const Color(0xFF008394),
               ),
             ),
             Row(
@@ -537,7 +783,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
           width: 8,
           height: 8,
           decoration: const BoxDecoration(
-            color: Color(0xFFD0D5DD), // Grey dot
+            color: Color(0xFFD0D5DD),
             shape: BoxShape.circle,
           ),
         ),
@@ -545,8 +791,17 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
     }
   }
 
-  Widget _buildTextField({required String hintText}) {
+  // --- TEXTFIELD BUILDERS ---
+  Widget _buildTextField({
+    required String hintText,
+    required TextEditingController controller,
+    required ValueChanged<String> onChanged,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
@@ -556,8 +811,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         ),
         filled: true,
         fillColor: const Color(0xFFF9F9F9),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -578,9 +832,11 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
     required String hintText,
     required bool obscureText,
     required VoidCallback onToggleVisibility,
+    required ValueChanged<String> onChanged,
   }) {
     return TextFormField(
       obscureText: obscureText,
+      onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
@@ -590,8 +846,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         ),
         filled: true,
         fillColor: const Color(0xFFF9F9F9),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -616,17 +871,24 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
     );
   }
 
-  Widget _buildPhoneField({required String hintPhone}) {
+  // Dial code phone input. Synchronized with chosen country flag and dial code!
+  Widget _buildPhoneField({
+    required String hintPhone,
+    required TextEditingController controller,
+    required AddDoctorProvider provider,
+  }) {
+    final country = provider.state.country ?? 'United States';
+    final dialCode = _getPhoneCode(country);
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Color(0xFFF9F9F9),
+        color: const Color(0xFFF9F9F9),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
-          // Country code part
           GestureDetector(
             onTap: () async {
               final result = await showModalBottomSheet<String>(
@@ -634,15 +896,16 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
                 builder: (context) => SelectCountryScreen(
-                  initialSelection: _selectedPhoneCountry,
+                  initialSelection: provider.state.country ?? 'United States',
                 ),
               );
               if (result != null) {
-                setState(() => _selectedPhoneCountry = result);
+                provider.setCountry(result);
               }
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              color: Colors.transparent,
               child: Row(
                 children: [
                   Container(
@@ -651,27 +914,27 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(2),
                       image: DecorationImage(
-                        image: AssetImage(
-                            'images/flags/Nation=${_getFlagAssetName(_selectedPhoneCountry)}.png'),
+                        image: AssetImage('images/flags/Nation=${_getFlagAssetName(country)}.png'),
                         fit: BoxFit.cover,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(_getPhoneCode(_selectedPhoneCountry),
-                      style: const TextStyle(fontWeight: FontWeight.w500)),
+                  Text(dialCode, style: const TextStyle(fontWeight: FontWeight.w500)),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down,
-                      size: 18, color: AppColors.textSecondary),
+                  const Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textPrimary),
                 ],
               ),
             ),
           ),
           Container(width: 1, height: 24, color: AppColors.border),
-          // Number part
           Expanded(
             child: TextField(
+              controller: controller,
               keyboardType: TextInputType.phone,
+              onChanged: (val) {
+                provider.setPhoneNumber('$dialCode $val');
+              },
               decoration: InputDecoration(
                 hintText: hintPhone,
                 hintStyle: const TextStyle(
@@ -680,8 +943,7 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
                 ),
                 border: InputBorder.none,
                 fillColor: const Color(0xFFF9F9F9),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
           ),
@@ -690,7 +952,52 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
     );
   }
 
-  Widget _buildGenderSelection() {
+  Widget _buildDropdownField(String hint, bool showFlag, {bool isSelected = false}) {
+    bool isActuallySelected = isSelected || (!showFlag && hint != 'Choose state');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              if (showFlag && hint != 'Choose country') ...[
+                Container(
+                  width: 20,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(2),
+                    image: DecorationImage(
+                      image: AssetImage('images/flags/Nation=${_getFlagAssetName(hint)}.png'),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Text(
+                hint,
+                style: TextStyle(
+                  color: isActuallySelected ? AppColors.textPrimary : const Color(0xFFA0A5A9),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.textPrimary),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGenderSelection(AddDoctorProvider provider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -705,22 +1012,20 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildGenderCard('Male')),
+            Expanded(child: _buildGenderCard('Male', provider)),
             const SizedBox(width: 16),
-            Expanded(child: _buildGenderCard('Female')),
+            Expanded(child: _buildGenderCard('Female', provider)),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildGenderCard(String value) {
-    bool isSelected = _selectedGender == value;
+  Widget _buildGenderCard(String value, AddDoctorProvider provider) {
+    bool isSelected = provider.state.gender == value;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedGender = value;
-        });
+        provider.setGender(value);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24),
@@ -754,57 +1059,6 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
     );
   }
 
-  Widget _buildDropdownField(String hint, bool showFlag,
-      {bool isSelected = false}) {
-    // If it's a state field, it's considered "selected" if it's not the placeholder
-    bool isActuallySelected = isSelected || (!showFlag && hint != 'Choose state');
-    
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              if (showFlag && hint != 'Choose country') ...[
-                Container(
-                  width: 20,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    image: DecorationImage(
-                      image: AssetImage(
-                          'images/flags/Nation=${_getFlagAssetName(hint)}.png'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Text(
-                hint,
-                style: TextStyle(
-                  color: isActuallySelected
-                      ? AppColors.textPrimary
-                      : const Color(0xFFA0A5A9),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const Icon(Icons.keyboard_arrow_down,
-              size: 20, color: AppColors.textPrimary),
-        ],
-      ),
-    );
-  }
-
   String _getFlagAssetName(String country) {
     if (country == 'Uzbekistan') return 'uzbekistan';
     return country.toLowerCase().replaceAll(' ', '_');
@@ -812,48 +1066,16 @@ class _AddDoctorScreenState extends State<AddDoctorScreen> {
 
   String _getPhoneCode(String country) {
     const Map<String, String> phoneCodes = {
-      'Afghanistan': '+93', 'Albania': '+355', 'Algeria': '+213',
-      'Angola': '+244', 'Argentina': '+54', 'Armenia': '+374',
-      'Australia': '+61', 'Austria': '+43', 'Azerbaijan': '+994',
-      'Bahrain': '+973', 'Bangladesh': '+880', 'Belarus': '+375',
-      'Belgium': '+32', 'Bolivia': '+591', 'Bosnia': '+387',
-      'Brazil': '+55', 'Bulgaria': '+359', 'Cambodia': '+855',
-      'Cameroon': '+237', 'Canada': '+1', 'Chile': '+56',
-      'China': '+86', 'Colombia': '+57', 'Croatia': '+385',
-      'Cuba': '+53', 'Cyprus': '+357', 'Czech Republic': '+420',
-      'Denmark': '+45', 'Ecuador': '+593', 'Egypt': '+20',
-      'Ethiopia': '+251', 'Finland': '+358', 'France': '+33',
-      'Georgia': '+995', 'Germany': '+49', 'Ghana': '+233',
-      'Greece': '+30', 'Guatemala': '+502', 'Honduras': '+504',
-      'Hong Kong': '+852', 'Hungary': '+36', 'India': '+91',
-      'Indonesia': '+62', 'Iran': '+98', 'Iraq': '+964',
-      'Ireland': '+353', 'Israel': '+972', 'Italy': '+39',
-      'Jamaica': '+1876', 'Japan': '+81', 'Jordan': '+962',
-      'Kazakhstan': '+7', 'Kenya': '+254', 'Kuwait': '+965',
-      'Kyrgyzstan': '+996', 'Laos': '+856', 'Latvia': '+371',
-      'Lebanon': '+961', 'Libya': '+218', 'Lithuania': '+370',
-      'Luxembourg': '+352', 'Macau': '+853', 'Malaysia': '+60',
-      'Maldives': '+960', 'Mexico': '+52', 'Moldova': '+373',
-      'Mongolia': '+976', 'Morocco': '+212', 'Myanmar': '+95',
-      'Nepal': '+977', 'Netherlands': '+31', 'New Zealand': '+64',
-      'Nigeria': '+234', 'North Korea': '+850', 'Norway': '+47',
-      'Oman': '+968', 'Pakistan': '+92', 'Panama': '+507',
-      'Paraguay': '+595', 'Peru': '+51', 'Philippines': '+63',
-      'Poland': '+48', 'Portugal': '+351', 'Qatar': '+974',
-      'Romania': '+40', 'Russia': '+7', 'Saudi Arabia': '+966',
-      'Serbia': '+381', 'Singapore': '+65', 'Slovakia': '+421',
-      'Slovenia': '+386', 'South Africa': '+27', 'South Korea': '+82',
-      'Spain': '+34', 'Sri Lanka': '+94', 'Sudan': '+249',
-      'Sweden': '+46', 'Switzerland': '+41', 'Syria': '+963',
-      'Taiwan': '+886', 'Tajikistan': '+992', 'Tanzania': '+255',
-      'Thailand': '+66', 'Tunisia': '+216', 'Turkey': '+90',
-      'Turkmenistan': '+993', 'Uganda': '+256', 'Ukraine': '+380',
-      'United Arab Emirates': '+971', 'United Kingdom': '+44',
-      'United States': '+1', 'Uruguay': '+598', 'Uzbekistan': '+998',
-      'Venezuela': '+58', 'Vietnam': '+84', 'Wales': '+44',
-      'Yemen': '+967', 'Zambia': '+260', 'Zimbabwe': '+263',
+      'United States': '+1',
+      'Vietnam': '+84',
+      'United Kingdom': '+44',
+      'Uzbekistan': '+998',
+      'Uruguay': '+598',
+      'Vanuatu': '+678',
+      'Venezuela': '+58',
+      'Yemen': '+967',
+      'Zambia': '+260',
     };
     return phoneCodes[country] ?? '+1';
   }
-
 }

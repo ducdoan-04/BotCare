@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../repositories/doctor_repository.dart';
 import 'select_country_screen.dart';
 import 'select_state_screen.dart';
 
@@ -14,14 +15,99 @@ class UpdateDoctorScreen extends StatefulWidget {
 }
 
 class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
-  int _currentStep = 0; // 0: Basic Info, 1: Detail Info, 2: Security
+  final _repository = DoctorRepository();
+
+  late final TextEditingController _fullNameController;
+  late final TextEditingController _addressController;
+  late final TextEditingController _phoneController;
+  late final TextEditingController _experienceController;
+  late final TextEditingController _specializationController;
+  late final TextEditingController _licenseNumberController;
+  late final TextEditingController _educationController;
+
+  int _activeTab = 0; // 0: Basic Info, 1: Detail Info, 2: Security
   String _selectedPhoneCountry = 'United States';
   String _selectedGender = 'Female';
   String? _selectedState = 'Alaska';
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.doctor ?? {};
+
+    _fullNameController = TextEditingController(text: d['full_name'] ?? '');
+    _addressController = TextEditingController(text: d['address'] ?? '');
+    _phoneController = TextEditingController(text: d['phone_number'] ?? '');
+    _experienceController = TextEditingController(text: d['experience'] ?? '');
+    _specializationController = TextEditingController(text: d['specialization'] ?? '');
+    _licenseNumberController = TextEditingController(text: d['license_number'] ?? '');
+    _educationController = TextEditingController(text: d['education'] ?? '');
+
+    _selectedGender = d['gender'] ?? 'Female';
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _addressController.dispose();
+    _phoneController.dispose();
+    _experienceController.dispose();
+    _specializationController.dispose();
+    _licenseNumberController.dispose();
+    _educationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _updateDoctor() async {
+    final d = widget.doctor;
+    if (d == null || d['id'] == null) {
+      Navigator.pop(context);
+      return;
+    }
+
+    if (_fullNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter full name'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final updatePayload = {
+        'full_name': _fullNameController.text.trim(),
+        'address': _addressController.text.trim(),
+        'phone_number': _phoneController.text.trim(),
+        'gender': _selectedGender,
+        'experience': _experienceController.text.trim(),
+        'specialization': _specializationController.text.trim(),
+        'license_number': _licenseNumberController.text.trim(),
+        'education': _educationController.text.trim(),
+      };
+
+      await _repository.updateDoctor(d['id'], updatePayload);
+
+      setState(() {
+        _isSaving = false;
+      });
+
+      _showSuccessDialog(context);
+    } catch (e) {
+      setState(() {
+        _isSaving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating profile: $e'), backgroundColor: AppColors.error),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final doctor = widget.doctor;
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: const BoxDecoration(
@@ -56,8 +142,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                       color: AppColors.background,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close,
-                        size: 20, color: AppColors.textSecondary),
+                    child: const Icon(Icons.close, size: 20, color: AppColors.textSecondary),
                   ),
                 ),
               ],
@@ -67,194 +152,200 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
 
           // --- CONTENT ---
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- TABS ---
-                  Row(
+            child: _isSaving 
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFF008394)))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTab('Basic Info', true),
-                      const SizedBox(width: 12),
-                      _buildTab('Detail Info', false),
-                      const SizedBox(width: 12),
-                      _buildTab('Security', false),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-
-                  // --- AVATAR UPLOAD ---
-                  Row(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          image: DecorationImage(
-                            image: AssetImage(
-                                'images/avatars-doctor/avatar-${(widget.index ?? 0) + 1}.jpg'),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // --- TABS ---
+                      Row(
                         children: [
-                          const Text(
-                            'JPG or PNG, < 5 MB.',
-                            style: TextStyle(
-                                color: AppColors.textSecondary, fontSize: 13),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(24),
-                              border:
-                                  Border.all(color: const Color(0xFF008394)),
-                            ),
-                            child: const Text(
-                              'Upload New Picture',
-                              style: TextStyle(
-                                color: Color(0xFF008394),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
+                          _buildTabItem(0, 'Basic Info'),
+                          const SizedBox(width: 12),
+                          _buildTabItem(1, 'Detail Info'),
+                          const SizedBox(width: 12),
+                          _buildTabItem(2, 'Security'),
                         ],
                       ),
+                      const SizedBox(height: 32),
+
+                      if (_activeTab == 0) ...[
+                        // --- AVATAR UPLOAD ---
+                        Row(
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                image: const DecorationImage(
+                                  image: AssetImage('images/avatars-doctor/avatar-1.jpg'),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'JPG or PNG, < 5 MB.',
+                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(color: const Color(0xFF008394)),
+                                  ),
+                                  child: const Text(
+                                    'Upload New Picture',
+                                    style: TextStyle(
+                                      color: Color(0xFF008394),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- FORM FIELDS ---
+                        _buildTextField(hintText: 'Enter full name', controller: _fullNameController),
+                        const SizedBox(height: 16),
+                        _buildTextField(hintText: 'Enter address', controller: _addressController),
+                        const SizedBox(height: 16),
+                        _buildPhoneField(hintPhone: 'Enter phone number', controller: _phoneController),
+                        const SizedBox(height: 16),
+                        _buildDropdownField('United States', true),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () async {
+                            final result = await showModalBottomSheet<String>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => SelectStateScreen(
+                                initialSelection: _selectedState ?? 'Alaska',
+                              ),
+                            );
+                            if (result != null) {
+                              setState(() => _selectedState = result);
+                            }
+                          },
+                          child: _buildDropdownField(_selectedState ?? 'Alaska', false),
+                        ),
+                        const SizedBox(height: 24),
+                        _buildGenderSelection(),
+                      ] else if (_activeTab == 1) ...[
+                        _buildTextField(hintText: 'Enter experience (e.g. 10+ Years)', controller: _experienceController),
+                        const SizedBox(height: 16),
+                        _buildTextField(hintText: 'Enter specialization (e.g. Neurologist)', controller: _specializationController),
+                        const SizedBox(height: 16),
+                        _buildTextField(hintText: 'Enter license number (e.g. LIC-291829)', controller: _licenseNumberController),
+                        const SizedBox(height: 16),
+                        _buildTextField(hintText: 'Enter education credentials', controller: _educationController),
+                      ] else ...[
+                        _buildTextField(hintText: 'Update username (Optional)', controller: TextEditingController()),
+                        const SizedBox(height: 16),
+                        _buildTextField(hintText: 'Update password (Optional)', controller: TextEditingController()),
+                      ],
+                      const SizedBox(height: 40),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // --- FORM FIELDS ---
-                  _buildTextField(hintText: 'Dr. Dianne Russell'),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                      hintText: '6391 Elgin St. Celina, Delaware 10299'),
-                  const SizedBox(height: 16),
-                  _buildPhoneField(hintPhone: '(704) 555-0127'),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                      hintText: '6391 Elgin St. Celina, Delaware 10299'),
-                  const SizedBox(height: 16),
-                  _buildDropdownField('United States',
-                      true), // Assuming flag is part of it or just text
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: () async {
-                      final result = await showModalBottomSheet<String>(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => SelectStateScreen(
-                          initialSelection: _selectedState ?? 'Alaska',
-                        ),
-                      );
-                      if (result != null) {
-                        setState(() => _selectedState = result);
-                      }
-                    },
-                    child: _buildDropdownField(
-                        _selectedState ?? 'Alaska', false),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(hintText: 'Fairbanks'),
-                  const SizedBox(height: 16),
-                  _buildTextField(hintText: '99703'),
-                  const SizedBox(height: 24),
-                  _buildGenderSelection(),
-
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
+                ),
           ),
 
           // --- FOOTER BUTTONS ---
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: const Color(0xFF008394)),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: Color(0xFF008394),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _showSuccessDialog(context),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF008394),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'Update',
-                        style: TextStyle(
+          if (!_isSaving)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: const Color(0xFF008394)),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF008394),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _updateDoctor,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF008394),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Text(
+                          'Update',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildTab(String label, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFFE6F2F3) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-            color: isSelected ? const Color(0xFF008394) : AppColors.border),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? const Color(0xFF008394) : AppColors.textSecondary,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-          fontSize: 13,
+  Widget _buildTabItem(int tabIndex, String label) {
+    final bool isSelected = _activeTab == tabIndex;
+    return GestureDetector(
+      onTap: () => setState(() => _activeTab = tabIndex),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFE6F2F3) : Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: isSelected ? const Color(0xFF008394) : AppColors.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF008394) : AppColors.textSecondary,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 13,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTextField({required String hintText}) {
+  Widget _buildTextField({required String hintText, required TextEditingController controller}) {
     return TextFormField(
+      controller: controller,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(
@@ -264,8 +355,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
         ),
         filled: true,
         fillColor: const Color(0xFFF9F9F9),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
@@ -282,17 +372,16 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
     );
   }
 
-  Widget _buildPhoneField({required String hintPhone}) {
+  Widget _buildPhoneField({required String hintPhone, required TextEditingController controller}) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Color(0xFFF9F9F9),
+        color: const Color(0xFFF9F9F9),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
-          // Country code part
           GestureDetector(
             onTap: () async {
               final result = await showModalBottomSheet<String>(
@@ -317,26 +406,23 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(2),
                       image: DecorationImage(
-                        image: AssetImage(
-                            'images/flags/Nation=${_getFlagAssetName(_selectedPhoneCountry)}.png'),
+                        image: AssetImage('images/flags/Nation=${_getFlagAssetName(_selectedPhoneCountry)}.png'),
                         fit: BoxFit.cover,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(_getPhoneCode(_selectedPhoneCountry),
-                      style: const TextStyle(fontWeight: FontWeight.w500)),
+                  Text(_getPhoneCode(_selectedPhoneCountry), style: const TextStyle(fontWeight: FontWeight.w500)),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down,
-                      size: 18, color: AppColors.textSecondary),
+                  const Icon(Icons.keyboard_arrow_down, size: 18, color: AppColors.textSecondary),
                 ],
               ),
             ),
           ),
           Container(width: 1, height: 24, color: AppColors.border),
-          // Number part
           Expanded(
             child: TextField(
+              controller: controller,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 hintText: hintPhone,
@@ -346,8 +432,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                 ),
                 border: InputBorder.none,
                 fillColor: const Color(0xFFF9F9F9),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
           ),
@@ -440,8 +525,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(2),
                     image: DecorationImage(
-                      image: AssetImage(
-                          'images/flags/Nation=${_getFlagAssetName(value)}.png'),
+                      image: AssetImage('images/flags/Nation=${_getFlagAssetName(value)}.png'),
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -458,8 +542,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
               ),
             ],
           ),
-          const Icon(Icons.keyboard_arrow_down,
-              size: 20, color: AppColors.textPrimary),
+          const Icon(Icons.keyboard_arrow_down, size: 20, color: AppColors.textPrimary),
         ],
       ),
     );
@@ -468,16 +551,15 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
   void _showSuccessDialog(BuildContext context) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
           child: Padding(
             padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Icon (Designer mistakenly used a Trash bin for success here, matching the provided screenshot exactly)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: const BoxDecoration(
@@ -490,30 +572,25 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                       color: Color(0xFF05B93E),
                       shape: BoxShape.circle,
                     ),
-                    child:
-                        const Icon(Icons.delete, color: Colors.white, size: 36),
+                    child: const Icon(Icons.check, color: Colors.white, size: 36), // Changed to check icon for visual correctness
                   ),
                 ),
                 const SizedBox(height: 24),
                 const Text(
                   'Successfully',
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   'Info doctor was changed successfully.',
                   textAlign: TextAlign.center,
-                  style:
-                      TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 32),
                 GestureDetector(
                   onTap: () {
                     Navigator.pop(context); // Close dialog
-                    Navigator.pop(context); // Close bottom sheet
+                    Navigator.pop(context, true); // Close bottom sheet and return true to refresh
                   },
                   child: Container(
                     width: double.infinity,
@@ -525,10 +602,7 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
                     alignment: Alignment.center,
                     child: const Text(
                       'Ok',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16),
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ),
                 ),
@@ -590,5 +664,4 @@ class _UpdateDoctorScreenState extends State<UpdateDoctorScreen> {
     };
     return phoneCodes[country] ?? '+1';
   }
-
 }

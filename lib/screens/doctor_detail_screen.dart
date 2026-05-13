@@ -1,20 +1,68 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../theme/app_colors.dart';
+import '../models/doctor_model.dart';
+import '../repositories/doctor_repository.dart';
 import 'update_doctor_screen.dart';
 
 class DoctorDetailScreen extends StatefulWidget {
-  final Map<String, dynamic> doctor;
-  final int index;
+  final Doctor doctor;
 
-  const DoctorDetailScreen({super.key, required this.doctor, required this.index});
+  const DoctorDetailScreen({super.key, required this.doctor});
 
   @override
   State<DoctorDetailScreen> createState() => _DoctorDetailScreenState();
 }
 
 class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
+  final _repository = DoctorRepository();
+  
+  late Doctor _doctor;
   int _activeTab = 0; // 0: Timetable, 1: Summary, 2: Information
   int _timetableSubTab = 0; // 0: Check-up, 1: Urgent visit
+
+  DoctorTimetableResponse? _timetable;
+  bool _isTimetableLoading = true;
+  String _timetableError = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _doctor = widget.doctor;
+    _fetchTimetable();
+  }
+
+  Future<void> _fetchTimetable() async {
+    setState(() {
+      _isTimetableLoading = true;
+      _timetableError = '';
+    });
+
+    try {
+      final timetableData = await _repository.fetchDoctorTimetable(_doctor.id);
+      setState(() {
+        _timetable = timetableData;
+        _isTimetableLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _timetableError = e.toString().replaceAll('Exception: ', '');
+        _isTimetableLoading = false;
+      });
+    }
+  }
+
+  // Reload doctor detail if updated
+  Future<void> _refreshDoctorProfile() async {
+    try {
+      final updatedDoctor = await _repository.fetchDoctorById(_doctor.id);
+      setState(() {
+        _doctor = updatedDoctor;
+      });
+    } catch (e) {
+      print('Failed to refresh doctor profile: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +104,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
 
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
                 child: Column(
                   children: [
@@ -92,6 +141,22 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   }
 
   Widget _buildProfileHeader() {
+    final bool isAvailable = _doctor.status.toLowerCase() == 'available';
+
+    // Image fallback logic for asset or default network profiles
+    ImageProvider profileImage;
+    if (_doctor.profileImageUrl != null && _doctor.profileImageUrl!.startsWith('images/')) {
+      profileImage = AssetImage(_doctor.profileImageUrl!);
+    } else if (_doctor.profileImageUrl != null && _doctor.profileImageUrl!.startsWith('uploads/')) {
+      final host = kIsWeb ? Uri.base.host : '192.168.1.8';
+      final finalHost = (host.isEmpty || host == 'localhost') ? '192.168.1.8' : host;
+      profileImage = NetworkImage('http://$finalHost:3000/${_doctor.profileImageUrl!}');
+    } else if (_doctor.profileImageUrl != null && _doctor.profileImageUrl!.startsWith('http')) {
+      profileImage = NetworkImage(_doctor.profileImageUrl!);
+    } else {
+      profileImage = const AssetImage('images/avatars-doctor/avatar-1.jpg');
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -106,7 +171,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
               image: DecorationImage(
-                image: AssetImage('images/avatars-doctor/avatar-${widget.index + 1}.jpg'),
+                image: profileImage,
                 fit: BoxFit.cover,
               ),
             ),
@@ -121,12 +186,15 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFF05B93E), width: 1),
+                    border: Border.all(
+                      color: isAvailable ? const Color(0xFF05B93E) : AppColors.textSecondary.withOpacity(0.5),
+                      width: 1,
+                    ),
                   ),
-                  child: const Text(
-                    'Available',
+                  child: Text(
+                    isAvailable ? 'Available' : 'Away',
                     style: TextStyle(
-                      color: Color(0xFF05B93E),
+                      color: isAvailable ? const Color(0xFF05B93E) : AppColors.textSecondary,
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),
@@ -134,7 +202,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  widget.doctor['name'],
+                  _doctor.fullName,
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -142,7 +210,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                   ),
                 ),
                 Text(
-                  widget.doctor['specialty'],
+                  _doctor.specialization ?? 'General Practitioner',
                   style: const TextStyle(
                     fontSize: 14,
                     color: AppColors.textSecondary,
@@ -153,16 +221,20 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () {
-                          showModalBottomSheet(
+                        onTap: () async {
+                          final result = await showModalBottomSheet<bool>(
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.transparent,
                             builder: (context) => UpdateDoctorScreen(
-                              doctor: widget.doctor,
-                              index: widget.index,
+                              doctor: _doctor.toJson(),
+                              index: 0,
                             ),
                           );
+                          if (result == true) {
+                            _refreshDoctorProfile();
+                            _fetchTimetable();
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
@@ -235,9 +307,42 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   }
 
   Widget _buildTimetableTab() {
+    if (_isTimetableLoading) {
+      return Container(
+        height: 200,
+        alignment: Alignment.center,
+        child: const CircularProgressIndicator(color: Color(0xFF008394)),
+      );
+    }
+
+    if (_timetableError.isNotEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32)),
+        child: Column(
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.error, size: 40),
+            const SizedBox(height: 12),
+            Text(_timetableError, style: const TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: _fetchTimetable,
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF008394)),
+              child: const Text('Retry'),
+            )
+          ],
+        ),
+      );
+    }
+
+    final t = _timetable!;
+    final totalPatientsCount = t.checkUps.length + t.urgentVisits.length;
+    final activeAppointments = _timetableSubTab == 0 ? t.checkUps : t.urgentVisits;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- APPOINTMENTS WRAPPER ---
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
@@ -257,12 +362,12 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                           text: 'Today patient  ',
                           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
-                        const TextSpan(
-                          text: '4',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        TextSpan(
+                          text: '$totalPatientsCount',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         TextSpan(
-                          text: _timetableSubTab == 0 ? '/8' : '/4',
+                          text: _timetableSubTab == 0 ? '/${t.checkUps.length}' : '/${t.urgentVisits.length}',
                           style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
                         ),
                       ],
@@ -280,46 +385,40 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               const SizedBox(height: 20),
               Row(
                 children: [
-                  _buildSubTab(0, 'Check-up (8)'),
+                  _buildSubTab(0, 'Check-up (${t.checkUps.length})'),
                   const SizedBox(width: 12),
-                  _buildSubTab(1, 'Urgent visit (4)'),
+                  _buildSubTab(1, 'Urgent visit (${t.urgentVisits.length})'),
                 ],
               ),
               const SizedBox(height: 24),
-              if (_timetableSubTab == 0)
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.85,
-                  children: [
-                    _buildAppointmentCard('Confirm', '09.40 AM', 'Routine check up', 'Leslie Alexander', const Color(0xFF027A48), const Color(0xFFECFDF3)),
-                    _buildAppointmentCard('Canceled', '09.40 AM', 'Routine check up', 'Leslie Alexander', const Color(0xFFB42318), const Color(0xFFFEF3F2)),
-                    _buildAppointmentCard('Canceled', '09.40 AM', 'Routine check up', 'Leslie Alexander', const Color(0xFFB42318), const Color(0xFFFEF3F2)),
-                    _buildAppointmentCard('Pending', '09.40 AM', 'Routine check up', 'Leslie Alexander', const Color(0xFF667085), const Color(0xFFF2F4F7)),
-                  ],
+              if (activeAppointments.isEmpty)
+                Container(
+                  height: 120,
+                  alignment: Alignment.center,
+                  child: const Text('No appointments for today', style: TextStyle(color: AppColors.textSecondary)),
                 )
               else
-                GridView.count(
+                GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.85,
-                  children: [
-                    _buildAppointmentCard('Pending', '09.40 AM', 'Dermatology consultation', 'Savannah Nguyen', const Color(0xFF667085), const Color(0xFFF2F4F7), cardBgColor: const Color(0xFFFFF5F2), cardBorderColor: const Color(0xFFFCAE91)),
-                    _buildAppointmentCard('Confirm', '09.40 AM', 'Dermatology consultation', 'Savannah Nguyen', const Color(0xFF027A48), const Color(0xFFECFDF3), cardBgColor: const Color(0xFFFFF5F2), cardBorderColor: const Color(0xFFFCAE91)),
-                    _buildAppointmentCard('Confirm', '09.40 AM', 'Dermatology consultation', 'Savannah Nguyen', const Color(0xFF027A48), const Color(0xFFECFDF3), cardBgColor: const Color(0xFFFFF5F2), cardBorderColor: const Color(0xFFFCAE91)),
-                    _buildAppointmentCard('Confirm', '09.40 AM', 'Dermatology consultation', 'Savannah Nguyen', const Color(0xFF027A48), const Color(0xFFECFDF3), cardBgColor: const Color(0xFFFFF5F2), cardBorderColor: const Color(0xFFFCAE91)),
-                  ],
-                ),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 0.85,
+                  ),
+                  itemCount: activeAppointments.length,
+                  itemBuilder: (context, idx) {
+                    final app = activeAppointments[idx];
+                    return _buildDynamicAppointmentCard(app);
+                  },
+                )
             ],
           ),
         ),
         const SizedBox(height: 24),
+
+        // --- AVAILABILITY CARD ---
         Container(
           padding: const EdgeInsets.all(24),
           width: double.infinity,
@@ -335,20 +434,16 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               const SizedBox(height: 20),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _buildTimeSlot('09.00:AM', isDisabled: true),
-                  _buildTimeSlot('09.30:AM'),
-                  _buildTimeSlot('10.00:AM'),
-                  _buildTimeSlot('10.30:AM'),
-                  _buildTimeSlot('11.30:AM'),
-                  _buildTimeSlot('12.00:PM', isDisabled: true),
-                  _buildTimeSlot('02.00:PM'),
-                  _buildTimeSlot('02.30:PM'),
-                ],
-              ),
+              if (t.availability.isEmpty)
+                const Text('No availability slots defined', style: TextStyle(color: AppColors.textSecondary))
+              else
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: t.availability.map((slot) {
+                    return _buildTimeSlot(slot.timeSlot, isDisabled: slot.isBooked);
+                  }).toList(),
+                ),
             ],
           ),
         ),
@@ -391,7 +486,29 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
     );
   }
 
-  Widget _buildAppointmentCard(String status, String time, String title, String patient, Color textColor, Color badgeBgColor, {Color? cardBgColor, Color? cardBorderColor}) {
+  Widget _buildDynamicAppointmentCard(DoctorAppointment app) {
+    Color textColor = const Color(0xFF667085);
+    Color badgeBgColor = const Color(0xFFF2F4F7);
+    Color? cardBgColor;
+    Color? cardBorderColor;
+
+    final status = app.status.toLowerCase();
+    if (status == 'confirm') {
+      textColor = const Color(0xFF027A48);
+      badgeBgColor = const Color(0xFFECFDF3);
+    } else if (status == 'canceled') {
+      textColor = const Color(0xFFB42318);
+      badgeBgColor = const Color(0xFFFEF3F2);
+    } else if (status == 'pending') {
+      textColor = const Color(0xFFF79009);
+      badgeBgColor = const Color(0xFFFFFAEB);
+    }
+
+    if (app.category.toLowerCase() == 'urgent visit') {
+      cardBgColor = const Color(0xFFFFF5F2);
+      cardBorderColor = const Color(0xFFFCAE91);
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -410,22 +527,25 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
               border: Border.all(color: textColor.withOpacity(0.5)),
             ),
             child: Text(
-              status,
+              app.status,
               style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 12),
-          Text(time, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
+          Text(app.appointmentTime, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
           const SizedBox(height: 4),
-          Text(title, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+          Text(app.consultationType, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary), maxLines: 2, overflow: TextOverflow.ellipsis),
           const Spacer(),
-          Text(patient, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          Text(app.patientName, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         ],
       ),
     );
   }
 
   Widget _buildTimeSlot(String time, {bool isDisabled = false}) {
+    // Normalizing display format e.g. "09.00:AM" to "09:00 AM" or similar
+    final formattedTime = time.replaceAll('.', ':').replaceAll(':', ' ');
+
     return Container(
       width: (MediaQuery.of(context).size.width - 96 - 24) / 3, // Approx 3 columns
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -436,7 +556,7 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
       ),
       alignment: Alignment.center,
       child: Text(
-        time,
+        formattedTime,
         style: TextStyle(
           color: isDisabled ? AppColors.textSecondary.withOpacity(0.5) : AppColors.textPrimary,
           fontSize: 13,
@@ -449,16 +569,50 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   Widget _buildSummaryTab() {
     return Column(
       children: [
-        _buildSummaryItem('Total patients', '230', '', Icons.people_outline, const Color(0xFF008394), const Color(0xFFE6F2F3), subtext: 'Have increased from yesterday', trendPercent: '3.5%'),
+        _buildSummaryItem(
+          'Total patients',
+          '${_doctor.totalPatients}',
+          '',
+          Icons.people_outline,
+          const Color(0xFF008394),
+          const Color(0xFFE6F2F3),
+          subtext: 'Have increased from yesterday',
+          trendPercent: '${_doctor.patientsIncreasePercent}%',
+        ),
         const SizedBox(height: 16),
-        _buildSummaryItem('Surgeries', '90', '', Icons.colorize, const Color(0xFFD92D20), const Color(0xFFFEF3F2), subtext: 'Total space ready for use by the patient.'),
+        _buildSummaryItem(
+          'Surgeries',
+          '${_doctor.surgeries}',
+          '',
+          Icons.colorize,
+          const Color(0xFFD92D20),
+          const Color(0xFFFEF3F2),
+          subtext: 'Total space ready for use by the patient.',
+        ),
         const SizedBox(height: 16),
-        _buildSummaryItem('Reviews', '4.5', '/5.0', Icons.star_rounded, const Color(0xFFF79009), const Color(0xFFFFFAEB), subtext: 'Based on 120 reviews from patient.'),
+        _buildSummaryItem(
+          'Reviews',
+          '${_doctor.rating}',
+          '/5.0',
+          Icons.star_rounded,
+          const Color(0xFFF79009),
+          const Color(0xFFFFFAEB),
+          subtext: 'Based on ${_doctor.totalReviews} reviews from patient.',
+        ),
       ],
     );
   }
 
-  Widget _buildSummaryItem(String title, String value, String suffix, IconData icon, Color iconColor, Color iconBgColor, {required String subtext, String? trendPercent}) {
+  Widget _buildSummaryItem(
+    String title,
+    String value,
+    String suffix,
+    IconData icon,
+    Color iconColor,
+    Color iconBgColor, {
+    required String subtext,
+    String? trendPercent,
+  }) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -514,14 +668,14 @@ class _DoctorDetailScreenState extends State<DoctorDetailScreen> {
   Widget _buildInformationTab() {
     return Column(
       children: [
-        _buildInfoCard(Icons.person_outline, 'Gender', 'Male'),
-        _buildInfoCard(Icons.email_outlined, 'Email', 'alma.lawson@example.com'),
-        _buildInfoCard(Icons.phone_outlined, 'Phone number', '(704) 555-0127'),
-        _buildInfoCard(Icons.location_on_outlined, 'Address', '6391 Elgin St. Celina, Delaware 10299'),
-        _buildInfoCard(Icons.layers_outlined, 'Experience', '10+ Years'),
-        _buildInfoCard(Icons.school_outlined, 'Education', 'Harvard Medical School'),
-        _buildInfoCard(Icons.badge_outlined, 'License number', 'MD-2023-4982'),
-        _buildInfoCard(Icons.psychology_outlined, 'Specialization', 'Neurologist'),
+        _buildInfoCard(Icons.person_outline, 'Gender', _doctor.gender ?? 'Male'),
+        _buildInfoCard(Icons.email_outlined, 'Email', _doctor.email ?? 'Not specified'),
+        _buildInfoCard(Icons.phone_outlined, 'Phone number', _doctor.phoneNumber ?? 'Not specified'),
+        _buildInfoCard(Icons.location_on_outlined, 'Address', _doctor.address ?? 'Not specified'),
+        _buildInfoCard(Icons.layers_outlined, 'Experience', _doctor.experience ?? '1+ Years'),
+        _buildInfoCard(Icons.school_outlined, 'Education', _doctor.education ?? 'Medical Degree'),
+        _buildInfoCard(Icons.badge_outlined, 'License number', _doctor.licenseNumber ?? 'Not specified'),
+        _buildInfoCard(Icons.psychology_outlined, 'Specialization', _doctor.specialization ?? 'General Practitioner'),
       ],
     );
   }

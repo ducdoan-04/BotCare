@@ -68,10 +68,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => setState(() {}),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              child: const Text('Try Again'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () => setState(() {}),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF008394),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: const Text('Try Again'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton(
+                  onPressed: () {
+                    context.read<AuthProvider>().logout();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SplashScreen()),
+                      (route) => false,
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                  child: const Text('Logout', style: TextStyle(color: AppColors.error)),
+                ),
+              ],
             )
           ],
         ),
@@ -229,11 +253,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        context.watch<AuthProvider>().user?.fullName ?? 'Nola Hawkins',
+                                        context.read<AuthProvider>().user?.fullName ?? 'Nola Hawkins',
                                         style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15),
                                       ),
                                       Text(
-                                        context.watch<AuthProvider>().user?.email ?? 'Receptionist',
+                                        context.read<AuthProvider>().user?.email ?? 'Receptionist',
                                         style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                                       ),
                                     ],

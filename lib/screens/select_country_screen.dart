@@ -1,11 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../services/location_service.dart';
 
 class SelectCountryScreen extends StatefulWidget {
   final String initialSelection;
 
-  const SelectCountryScreen(
-      {super.key, this.initialSelection = 'United States'});
+  const SelectCountryScreen({super.key, this.initialSelection = 'United States'});
 
   @override
   State<SelectCountryScreen> createState() => _SelectCountryScreenState();
@@ -13,33 +14,39 @@ class SelectCountryScreen extends StatefulWidget {
 
 class _SelectCountryScreenState extends State<SelectCountryScreen> {
   late String _selectedCountry;
-
-  final List<String> _countries = [
-    'China',
-    'India',
-    'Indonesia',
-    'Japan',
-    'Malaysia',
-    'Philippines',
-    'Singapore',
-    'South Korea',
-    'Thailand',
-    'United Kingdom',
-    'United States',
-    'Uruguay',
-    'Uzbekistan',
-    'Vanuatu',
-    'Venezuela',
-    'Vietnam',
-    'Wales',
-    'Yemen',
-    'Zambia',
-  ];
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  Timer? _debounceTimer;
+  List<String> _allCountries = [];
 
   @override
   void initState() {
     super.initState();
     _selectedCountry = widget.initialSelection;
+    _allCountries = LocationService.getCountries();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _searchQuery = query;
+      });
+    });
+  }
+
+  List<String> get _filteredCountries {
+    if (_searchQuery.isEmpty) return _allCountries;
+    return _allCountries
+        .where((country) => country.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
   }
 
   @override
@@ -65,12 +72,11 @@ class _SelectCountryScreenState extends State<SelectCountryScreen> {
                   child: Container(
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF2F4F7),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.arrow_back,
-                        size: 20, color: AppColors.textPrimary),
+                    child: const Icon(Icons.arrow_back, size: 20, color: AppColors.textPrimary),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -91,12 +97,11 @@ class _SelectCountryScreenState extends State<SelectCountryScreen> {
           Expanded(
             child: Column(
               children: [
-                // Search Bar
+                // Search Bar with actual interactive TextField & Debouncing
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -104,14 +109,27 @@ class _SelectCountryScreenState extends State<SelectCountryScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.search,
-                            color: AppColors.textSecondary, size: 20),
+                        const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
                         const SizedBox(width: 12),
-                        const Text(
-                          'Search country...',
-                          style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 15),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _onSearchChanged,
+                            decoration: const InputDecoration(
+                              hintText: 'Search country...',
+                              hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+                              border: InputBorder.none,
+                            ),
+                          ),
                         ),
+                        if (_searchController.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              _searchController.clear();
+                              _onSearchChanged('');
+                            },
+                            child: const Icon(Icons.clear, color: AppColors.textSecondary, size: 20),
+                          ),
                       ],
                     ),
                   ),
@@ -119,56 +137,59 @@ class _SelectCountryScreenState extends State<SelectCountryScreen> {
 
                 // Country List
                 Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: _countries.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(color: AppColors.border, height: 1),
-                    itemBuilder: (context, index) {
-                      final country = _countries[index];
-                      final isSelected = country == _selectedCountry;
+                  child: _filteredCountries.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No countries found',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          itemCount: _filteredCountries.length,
+                          separatorBuilder: (context, index) => const Divider(color: AppColors.border, height: 1),
+                          itemBuilder: (context, index) {
+                            final country = _filteredCountries[index];
+                            final isSelected = country == _selectedCountry;
 
-                      return InkWell(
-                        onTap: () => setState(() => _selectedCountry = country),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Row(
-                            children: [
-                              _buildFlag(country),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Text(
-                                  country,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: isSelected
-                                        ? const Color(0xFF008394)
-                                        : AppColors.textSecondary,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
+                            return InkWell(
+                              onTap: () {
+                                setState(() => _selectedCountry = country);
+                                Navigator.pop(context, country);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                child: Row(
+                                  children: [
+                                    _buildFlag(country),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Text(
+                                        country,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: isSelected ? const Color(0xFF008394) : AppColors.textSecondary,
+                                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      const Icon(Icons.check_circle, color: Color(0xFF008394), size: 24)
+                                    else
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: AppColors.border, width: 2),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                              if (isSelected)
-                                const Icon(Icons.check_circle,
-                                    color: Color(0xFF008394), size: 24)
-                              else
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: AppColors.border, width: 2),
-                                  ),
-                                ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ),
               ],
             ),
@@ -209,7 +230,7 @@ class _SelectCountryScreenState extends State<SelectCountryScreen> {
   Widget _buildFlag(String country) {
     String assetName = country.toLowerCase().replaceAll(' ', '_');
     if (country == 'Uzbekistan') {
-      assetName = 'uzbekistan'; // Match spelling in assets
+      assetName = 'uzbekistan';
     }
 
     return Container(
